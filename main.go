@@ -23,6 +23,10 @@ import (
 // @termsOfService http://swagger.io/terms/
 // @BasePath /v1
 
+// @SecurityDefinitions.apikey Authorization
+// @type apiKey
+// @in header
+// @name Authorization
 func main() {
 
 	dbHandler.DbConnect()

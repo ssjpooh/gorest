@@ -15,7 +15,65 @@ const docTemplate = `{
     },
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
-    "paths": {}
+    "paths": {
+        "/members": {
+            "get": {
+                "security": [
+                    {
+                        "Authorization": []
+                    }
+                ],
+                "description": "Get account list",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "members"
+                ],
+                "summary": "Show an account",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/members.Member"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "members.Member": {
+            "type": "object",
+            "properties": {
+                "engname": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "korname": {
+                    "type": "string"
+                },
+                "owneridx": {
+                    "type": "string"
+                },
+                "passwd": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "Authorization": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it

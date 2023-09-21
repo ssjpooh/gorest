@@ -16,7 +16,7 @@ import (
 
 func Authenticate(c *gin.Context) {
 
-	authHeader := c.GetHeader("Auth")
+	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "authorization_header_missing"})
 	}

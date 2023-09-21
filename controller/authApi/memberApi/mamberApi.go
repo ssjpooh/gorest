@@ -19,6 +19,14 @@ import (
 	authHandler "restApi/util/auth"
 )
 
+// @Summary Show an account
+// @Description Get account list
+// @Tags members
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} members.Member
+// @Security Authorization
+// @Router /members [get]
 func getMemberList(context *gin.Context) []members.Member {
 
 	var userList []members.Member
@@ -132,14 +140,6 @@ func patchMemeberInfo(context *gin.Context, id string) members.Member {
 
 func MmberApiHandler(v1 *gin.RouterGroup) {
 
-	// @Summary Show an account
-	// @Description Get account list
-	// @Tags memgers
-	// @Accept  json
-	// @Produce  json
-	// @Param   id path string true "ID"
-	// @Success 200 {object} members.Member
-	// @Router /members [get]
 	v1.GET("/members", authHandler.Authenticate, func(context *gin.Context) {
 		userList := getMemberList(context)
 		context.IndentedJSON(http.StatusOK, userList)

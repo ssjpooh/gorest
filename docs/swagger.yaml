@@ -1,9 +1,45 @@
 basePath: /v1
+definitions:
+  members.Member:
+    properties:
+      engname:
+        type: string
+      id:
+        type: string
+      korname:
+        type: string
+      owneridx:
+        type: string
+      passwd:
+        type: string
+    type: object
 info:
   contact: {}
   description: This is a sample server celler server.
   termsOfService: http://swagger.io/terms/
   title: Swagger Example API
   version: "1.0"
-paths: {}
+paths:
+  /members:
+    get:
+      consumes:
+      - application/json
+      description: Get account list
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/members.Member'
+      security:
+      - Authorization: []
+      summary: Show an account
+      tags:
+      - members
+securityDefinitions:
+  Authorization:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"
