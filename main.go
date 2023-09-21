@@ -12,11 +12,6 @@ import (
 	dbHandler "restApi/util/db"
 )
 
-type ClientDetails struct {
-	ClientID     string `db:"client_id"`
-	ClientSecret string `db:"client_secret"`
-}
-
 func main() {
 
 	dbHandler.DbConnect()

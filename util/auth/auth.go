@@ -10,11 +10,9 @@ import (
 	dbHandler "restApi/util/db"
 
 	"github.com/gin-gonic/gin"
-)
 
-type OauthInfo struct {
-	ExpiresAT int64 `db:"expires_at"`
-}
+	outhInfo "restApi/model/auth"
+)
 
 func Authenticate(c *gin.Context) {
 
@@ -25,7 +23,7 @@ func Authenticate(c *gin.Context) {
 
 	bearerToken := strings.Trim(authHeader[len("Bearer "):], " ")
 
-	var tokenExpiry OauthInfo
+	var tokenExpiry outhInfo.OauthInfo
 	err := dbHandler.Db.Get(&tokenExpiry, "SELECT expires_at FROM oauth_tokens WHERE token=?", bearerToken)
 	if err != nil {
 		if err == sql.ErrNoRows {

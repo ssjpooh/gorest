@@ -11,23 +11,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	outhInfo "restApi/model/auth"
 	dbHandler "restApi/util/db"
 )
 
 const (
 	TokenExpiry = 3600 // 1 hour in seconds
 )
-
-type ClientDetails struct {
-	ClientID     string `db:"client_id"`
-	ClientSecret string `db:"client_secret"`
-}
-
-type OauthInfo struct {
-	ClientID  string `db:"client_id"`
-	ExpiresAT int64  `db:"expires_at"`
-	Token     string `db:"token"`
-}
 
 func TokenApiHandler(route *gin.Engine) {
 
@@ -41,7 +31,7 @@ func tokenHandler(c *gin.Context) {
 	clientSecret := c.PostForm("client_secret")
 
 	fmt.Printf("[%s] [%s]\n", clientID, clientSecret)
-	var client ClientDetails
+	var client outhInfo.ClientDetails
 	err := dbHandler.Db.Get(&client, "SELECT client_id, client_secret FROM oauth_client_details WHERE client_id=?", clientID)
 	if err != nil {
 		log.Fatal(err)
@@ -59,7 +49,7 @@ func tokenHandler(c *gin.Context) {
 		return
 	}
 
-	var oauth OauthInfo
+	var oauth outhInfo.OauthInfo
 
 	token := generateToken()
 	expiry := time.Now().Add(time.Second * TokenExpiry)
