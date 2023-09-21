@@ -43,6 +43,7 @@ func getMemberInfo(context *gin.Context, id string) members.Member {
 	if err != nil {
 		context.IndentedJSON(http.StatusNotFound, gin.H{"message": "not Found"})
 		log.Print(err)
+		return userInfo
 	}
 
 	return userInfo
@@ -84,9 +85,9 @@ func insertOauth(context *gin.Context, ownerIdx uuid.UUID) sql.Result {
 	clientId := utils.GenterateUUID()
 	clientSecret := utils.GenterateUUID()
 
-	query2 := "INSERT INTO OAUTH_CLIENT_DETAILS ( owner_idx, client_id, client_secret) values ( ?, ?, ? )"
+	query := "INSERT INTO OAUTH_CLIENT_DETAILS ( owner_idx, client_id, client_secret) values ( ?, ?, ? )"
 
-	result, err := dbHandler.Db.Exec(query2, ownerIdx, clientId, clientSecret)
+	result, err := dbHandler.Db.Exec(query, ownerIdx, clientId, clientSecret)
 	if err != nil {
 		context.IndentedJSON(http.StatusBadRequest, gin.H{"message": "bad request"})
 		log.Print(err)
@@ -95,30 +96,91 @@ func insertOauth(context *gin.Context, ownerIdx uuid.UUID) sql.Result {
 	return result
 }
 
+func patchMemeberInfo(context *gin.Context, id string) members.Member {
+
+	userInfo := getMemberInfo(context, id)
+
+	var newUser members.Member
+	err := context.ShouldBindJSON(&newUser)
+	if err != nil {
+		context.IndentedJSON(http.StatusBadRequest, gin.H{"message": "bad request"})
+		log.Print(err)
+	}
+
+	if userInfo.ID == "" {
+		context.IndentedJSON(http.StatusBadRequest, gin.H{"message": "bad param"})
+	} else {
+		if newUser.KORName != "" {
+			userInfo.KORName = newUser.KORName
+		}
+
+		if newUser.ENGName != "" {
+			userInfo.ENGName = newUser.ENGName
+		}
+
+		query := "UPDATE USER_TBL set kor_user_name = ? , eng_user_name = ? where user_id = ? "
+		_, err := dbHandler.Db.Exec(query, userInfo.KORName, userInfo.ENGName, userInfo.ID)
+		if err != nil {
+			context.IndentedJSON(http.StatusBadRequest, gin.H{"message": "bad request"})
+			log.Print(err)
+		}
+
+	}
+	return userInfo
+
+}
+
 func MmberApiHandler(v1 *gin.RouterGroup) {
 
+	// @Summary Show an account
+	// @Description Get account list
+	// @Tags memgers
+	// @Accept  json
+	// @Produce  json
+	// @Param   id path string true "ID"
+	// @Success 200 {object} members.Member
+	// @Router /members [get]
 	v1.GET("/members", authHandler.Authenticate, func(context *gin.Context) {
 		userList := getMemberList(context)
 		context.IndentedJSON(http.StatusOK, userList)
 	})
 
-	// v1.GET("/members", func(context *gin.Context) {
-	// 	fmt.Println("TEST 3")
-	// 	userList := getMemberList(context)
-	// 	context.IndentedJSON(http.StatusOK, userList)
-	// })
-
-	// v1.GET("/members/:id", authHandler.Authenticate, func(context *gin.Context) {
-	// 	id := context.Param("id")
-	// 	userInfo := getMemberInfo(context, id)
-	// 	context.IndentedJSON(http.StatusOK, userInfo)
-	// })
-
-	v1.GET("/members/:id", func(context *gin.Context) {
+	// @Summary Show an account
+	// @Description Get member by id
+	// @Tags memgers
+	// @Accept  json
+	// @Produce  json
+	// @Param	id path string true "ID"
+	// @Success 200 {object} members.Member
+	// @Router /members/:id [get]
+	v1.GET("/members/:id", authHandler.Authenticate, func(context *gin.Context) {
 		id := context.Param("id")
 		userInfo := getMemberInfo(context, id)
 		context.IndentedJSON(http.StatusOK, userInfo)
 	})
+
+	// @Summary Show an account
+	// @Description Get account by ID
+	// @Tags memgers
+	// @Accept  json
+	// @Produce  json
+	// @Param	id path string true "ID"
+	// @Success 200 {object} members.Member
+	// @Router /members/:id [patch]
+	v1.PATCH("/members/:id", authHandler.Authenticate, func(context *gin.Context) {
+		id := context.Param("id")
+		userInfo := patchMemeberInfo(context, id)
+		context.IndentedJSON(http.StatusOK, userInfo)
+	})
+
+	// @Summary Show an account
+	// @Description Get account by ID
+	// @Tags memgers
+	// @Accept  json
+	// @Produce  json
+	// @Param member body Memeber true "Member"
+	// @Success 200 {object} members.Member
+	// @Router /members/:id [post]
 	v1.POST("/members", func(context *gin.Context) {
 		result := inserMemberInfo(context)
 		context.IndentedJSON(http.StatusCreated, result)

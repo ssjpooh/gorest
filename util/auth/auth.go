@@ -16,7 +16,7 @@ import (
 
 func Authenticate(c *gin.Context) {
 
-	authHeader := c.GetHeader("fox-auth")
+	authHeader := c.GetHeader("Auth")
 	if authHeader == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "authorization_header_missing"})
 	}
