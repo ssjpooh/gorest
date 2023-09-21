@@ -1,0 +1,12 @@
+```plantuml 
+@startuml
+
+main --> ctrl\aurh\token : TokenApiHandler
+main --> ctrl\auth\member : MmberApiHandler
+main --> ctrl\auth\room : RoomApiHandler
+
+model\auth --> ctrl\auth\token : clientInfo
+model\auth --> util\auth : clientInfo\noauthInfo
+
+@enduml
+```

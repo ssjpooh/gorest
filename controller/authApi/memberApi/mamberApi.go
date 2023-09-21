@@ -28,7 +28,7 @@ func getMemberList(context *gin.Context) []members.Member {
 	err := dbHandler.Db.Select(&userList, query)
 	if err != nil {
 		context.IndentedJSON(http.StatusNotFound, gin.H{"message": "not Found"})
-		log.Fatal(err)
+		log.Print(err)
 	}
 
 	return userList
@@ -42,7 +42,7 @@ func getMemberInfo(context *gin.Context, id string) members.Member {
 	err := dbHandler.Db.Get(&userInfo, query, id)
 	if err != nil {
 		context.IndentedJSON(http.StatusNotFound, gin.H{"message": "not Found"})
-		log.Fatal(err)
+		log.Print(err)
 	}
 
 	return userInfo
@@ -54,7 +54,7 @@ func inserMemberInfo(context *gin.Context) sql.Result {
 	err := context.ShouldBindJSON(&newUser)
 	if err != nil {
 		context.IndentedJSON(http.StatusBadRequest, gin.H{"message": "bad request"})
-		log.Fatal(err)
+		log.Print(err)
 	}
 
 	query := "INSERT INTO USER_TBL (owner_idx, user_id, user_passwd, kor_user_name, eng_user_name ) values (?, ? , ? , ? , ?)"
@@ -70,7 +70,7 @@ func inserMemberInfo(context *gin.Context) sql.Result {
 	result, err := dbHandler.Db.Exec(query, ownerIdx, newUser.ID, hashedPassword, newUser.KORName, newUser.ENGName)
 	if err != nil {
 		context.IndentedJSON(http.StatusBadRequest, gin.H{"message": "bad request"})
-		log.Fatal(err)
+		log.Print(err)
 	}
 
 	insertOauth(context, ownerIdx)
@@ -89,7 +89,7 @@ func insertOauth(context *gin.Context, ownerIdx uuid.UUID) sql.Result {
 	result, err := dbHandler.Db.Exec(query2, ownerIdx, clientId, clientSecret)
 	if err != nil {
 		context.IndentedJSON(http.StatusBadRequest, gin.H{"message": "bad request"})
-		log.Fatal(err)
+		log.Print(err)
 	}
 
 	return result

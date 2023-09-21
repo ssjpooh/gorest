@@ -4,8 +4,6 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
-	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -30,11 +28,9 @@ func tokenHandler(c *gin.Context) {
 	clientID := c.PostForm("client_id")
 	clientSecret := c.PostForm("client_secret")
 
-	fmt.Printf("[%s] [%s]\n", clientID, clientSecret)
 	var client outhInfo.ClientDetails
 	err := dbHandler.Db.Get(&client, "SELECT client_id, client_secret FROM oauth_client_details WHERE client_id=?", clientID)
 	if err != nil {
-		log.Fatal(err)
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid_client"})
 			return
@@ -43,9 +39,8 @@ func tokenHandler(c *gin.Context) {
 		return
 	}
 
-	fmt.Println("aa")
 	if client.ClientSecret != clientSecret {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid_client2"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid_client"})
 		return
 	}
 
@@ -59,25 +54,22 @@ func tokenHandler(c *gin.Context) {
 		if err == sql.ErrNoRows {
 			_, err = dbHandler.Db.Exec("INSERT INTO oauth_tokens (token, client_id, expires_at) VALUES (?, ?, ?)", token, clientID, milliseconds)
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error2"})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
 				return
 			}
 		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error1"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
 			return
 		}
 	} else {
 		getExpiresAt := oauth.ExpiresAT
 		nowMileSec := time.Now().UnixNano() / int64(time.Millisecond)
 		// 시간이 지났다
-		fmt.Printf(" token : [%s], expires_milisec :  [%d], clientId : [%s] ", token, milliseconds, clientID)
-		fmt.Println()
-		fmt.Printf("현재 : [%d], DB값 : [%d] ", nowMileSec, getExpiresAt)
+
 		if nowMileSec > getExpiresAt {
 			_, err = dbHandler.Db.Exec("UPDATE oauth_tokens SET token = ? , expires_at = ? where client_id = ? ", token, milliseconds, clientID)
 			if err != nil {
-				log.Fatal(err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error3"})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
 				return
 			}
 		} else {

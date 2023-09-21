@@ -12,7 +12,7 @@ func GenterateUUID() uuid.UUID {
 	uuidObj, err := uuid.NewRandom()
 	if err != nil {
 		fmt.Println("UUID 생성 중 오류 발생:", err)
-		log.Fatal(err)
+		log.Print(err)
 	}
 
 	return uuidObj
