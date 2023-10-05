@@ -7,6 +7,7 @@ import (
 	"time"
 
 	outhInfo "restApi/model/auth"
+	"restApi/util"
 	dbHandler "restApi/util/db"
 
 	"github.com/dgrijalva/jwt-go"
@@ -37,6 +38,7 @@ func tokenHandler(c *gin.Context) {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid_client"})
 			return
 		}
+		log.Println("111")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
 		return
 	}
@@ -48,24 +50,29 @@ func tokenHandler(c *gin.Context) {
 
 	var oauth outhInfo.OauthInfo
 
-	token, refreshToken, err := generateToken(c, expiry)
+	token, refreshToken, serverAddr, err := generateToken(c, expiry)
 
 	if err != nil {
+		log.Println("222")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
 		return
 	}
 
-	log.Println("expiry : ", expiry)
+	log.Println("serverAddr : ", serverAddr)
+	log.Println("serverAddr : ", len(serverAddr))
+
 	milliseconds := expiry
 	err = dbHandler.Db.Get(&oauth, "SELECT client_id, expires_at, token from oauth_tokens where client_id = ? ", clientID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			_, err = dbHandler.Db.Exec("INSERT INTO oauth_tokens (token, client_id, expires_at, refresh_token) VALUES (?, ?, ?, ? )", token, clientID, milliseconds, refreshToken)
+			_, err = dbHandler.Db.Exec("INSERT INTO oauth_tokens (token, client_id, expires_at, refresh_token, server_address) VALUES (?, ?, ?, ?, ? )", token, clientID, milliseconds, refreshToken, serverAddr)
 			if err != nil {
+				log.Println("333")
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
 				return
 			}
 		} else {
+			log.Println("444")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
 			return
 		}
@@ -77,6 +84,7 @@ func tokenHandler(c *gin.Context) {
 		if nowMileSec > getExpiresAt {
 			_, err = dbHandler.Db.Exec("UPDATE oauth_tokens SET token = ? , expires_at = ? where client_id = ? ", token, milliseconds, clientID)
 			if err != nil {
+				log.Println("555")
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
 				return
 			}
@@ -90,19 +98,20 @@ func tokenHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"access_token": token, "refresh_token": refreshToken, "token_type": "bearer", "expires_in": milliseconds})
 }
 
-func generateToken(c *gin.Context, exp int64) (string, string, error) {
+func generateToken(c *gin.Context, exp int64) (string, string, string, error) {
 
 	token := jwt.New(jwt.SigningMethodHS256)
-
+	serverAddr := util.GetLocalIP()
 	claims := token.Claims.(jwt.MapClaims)
 	claims["authorized"] = true
 	claims["user"] = "ssj"
 	claims["exp"] = exp
 	claims["requested"] = c.RemoteIP()
+	claims["server"] = serverAddr
 
 	tokenString, err := token.SignedString(outhInfo.JWTKey)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
 	refreshToken := jwt.New(jwt.SigningMethodHS256)
@@ -112,8 +121,8 @@ func generateToken(c *gin.Context, exp int64) (string, string, error) {
 
 	rt, err := refreshToken.SignedString(outhInfo.JWTKey)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
-	return tokenString, rt, nil
+	return tokenString, rt, serverAddr, nil
 }
