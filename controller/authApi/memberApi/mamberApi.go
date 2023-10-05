@@ -71,7 +71,7 @@ func inserMemberInfo(context *gin.Context) sql.Result {
 	// 비밀번호를 해싱
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newUser.PASSWD), bcrypt.DefaultCost)
 	if err != nil {
-		panic(err)
+		log.Print(err)
 	}
 
 	// 무작위 UUID 생성

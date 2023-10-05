@@ -9,4 +9,7 @@ type OauthInfo struct {
 	ClientID  string `db:"client_id"`
 	ExpiresAT int64  `db:"expires_at"`
 	Token     string `db:"token"`
+	RFToken   string `db:"refresh_tokne"`
 }
+
+var JWTKey = []byte("FOXEduP@ssW0rd")

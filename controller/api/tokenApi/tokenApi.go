@@ -1,21 +1,23 @@
 package tokenapi
 
 import (
-	"crypto/rand"
 	"database/sql"
-	"encoding/hex"
+	"log"
 	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
-
 	outhInfo "restApi/model/auth"
 	dbHandler "restApi/util/db"
+
+	"github.com/dgrijalva/jwt-go"
+	"github.com/gin-gonic/gin"
 )
 
 const (
 	TokenExpiry = 3600 // 1 hour in seconds
 )
+
+var expiry = time.Now().Add(time.Second * TokenExpiry).Unix()
 
 func TokenApiHandler(route *gin.Engine) {
 
@@ -46,13 +48,19 @@ func tokenHandler(c *gin.Context) {
 
 	var oauth outhInfo.OauthInfo
 
-	token := generateToken()
-	expiry := time.Now().Add(time.Second * TokenExpiry)
-	milliseconds := expiry.UnixNano() / int64(time.Millisecond)
+	token, refreshToken, err := generateToken(c, expiry)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
+		return
+	}
+
+	log.Println("expiry : ", expiry)
+	milliseconds := expiry
 	err = dbHandler.Db.Get(&oauth, "SELECT client_id, expires_at, token from oauth_tokens where client_id = ? ", clientID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			_, err = dbHandler.Db.Exec("INSERT INTO oauth_tokens (token, client_id, expires_at) VALUES (?, ?, ?)", token, clientID, milliseconds)
+			_, err = dbHandler.Db.Exec("INSERT INTO oauth_tokens (token, client_id, expires_at, refresh_token) VALUES (?, ?, ?, ? )", token, clientID, milliseconds, refreshToken)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
 				return
@@ -63,7 +71,7 @@ func tokenHandler(c *gin.Context) {
 		}
 	} else {
 		getExpiresAt := oauth.ExpiresAT
-		nowMileSec := time.Now().UnixNano() / int64(time.Millisecond)
+		nowMileSec := expiry
 		// 시간이 지났다
 
 		if nowMileSec > getExpiresAt {
@@ -79,11 +87,33 @@ func tokenHandler(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"access_token": token, "token_type": "bearer", "expires_in": milliseconds})
+	c.JSON(http.StatusOK, gin.H{"access_token": token, "refresh_token": refreshToken, "token_type": "bearer", "expires_in": milliseconds})
 }
 
-func generateToken() string {
-	b := make([]byte, 16)
-	rand.Read(b)
-	return hex.EncodeToString(b)
+func generateToken(c *gin.Context, exp int64) (string, string, error) {
+
+	token := jwt.New(jwt.SigningMethodHS256)
+
+	claims := token.Claims.(jwt.MapClaims)
+	claims["authorized"] = true
+	claims["user"] = "ssj"
+	claims["exp"] = exp
+	claims["requested"] = c.RemoteIP()
+
+	tokenString, err := token.SignedString(outhInfo.JWTKey)
+	if err != nil {
+		return "", "", err
+	}
+
+	refreshToken := jwt.New(jwt.SigningMethodHS256)
+	rtClaims := refreshToken.Claims.(jwt.MapClaims)
+	rtClaims["sub"] = "ssj"
+	rtClaims["exp"] = time.Now().Add(time.Second * TokenExpiry * 24).Unix()
+
+	rt, err := refreshToken.SignedString(outhInfo.JWTKey)
+	if err != nil {
+		return "", "", err
+	}
+
+	return tokenString, rt, nil
 }
