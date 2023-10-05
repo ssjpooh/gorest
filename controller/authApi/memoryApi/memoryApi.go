@@ -3,7 +3,6 @@ package memoryapi
 import (
 	"log"
 	"net/http"
-	authHandler "restApi/util/auth"
 
 	gmap "restApi/util/memory"
 
@@ -19,7 +18,7 @@ func getGlobalAuth(c *gin.Context, token string) outhInfo.AuthInfo {
 
 func MemoryApiHaneler(v1 *gin.RouterGroup) {
 
-	v1.GET("/memory/:token", authHandler.Authenticate, func(context *gin.Context) {
+	v1.GET("/memory/:token", func(context *gin.Context) {
 		token := context.Param("token")
 		log.Println("memory token ::: ", token)
 		globalMap := getGlobalAuth(context, token)

@@ -19,14 +19,13 @@ import (
 	authHandler "restApi/util/auth"
 )
 
-// @Summary Show an account
-// @Description Get account list
-// @Tags members
-// @Accept  json
-// @Produce  json
-// @Success 200 {object} members.Member
-// @Security Authorization
-// @Router /members [get]
+/*
+Description : get member list
+Params      : gin.Context
+return      : []memvers.Member
+Author      : ssjpooh
+Date        : 2023.10.10
+*/
 func getMemberList(context *gin.Context) []members.Member {
 
 	var userList []members.Member
