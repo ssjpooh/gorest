@@ -1,0 +1,23 @@
+1. 주석의 기본 형태 
+/*
+Description : 설명 
+Params      : 파라메타 
+return      : 반환값 
+Author      : 작성자 
+Date        :  생성일 
+*/
+
+
+2. 파라메타 의 갯수 만큼 적기 
+3. 리턴의 갯수 만큼 적기 
+
+4. 수정이 생긴 다면 다음의 주석 추가 하기 
+/*
+Modify-n    : {
+    Description : 변경 내용  
+    Params      : 파라메타 
+    return      : 반환값 
+    Author      : 변경자 
+    Date        : 변경일 
+} 
+*/ 

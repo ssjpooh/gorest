@@ -2,7 +2,6 @@ package tokenapi
 
 import (
 	"database/sql"
-	"log"
 	"net/http"
 	"time"
 
@@ -38,7 +37,6 @@ func tokenHandler(c *gin.Context) {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid_client"})
 			return
 		}
-		log.Println("111")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
 		return
 	}
@@ -53,38 +51,36 @@ func tokenHandler(c *gin.Context) {
 	token, refreshToken, serverAddr, err := generateToken(c, expiry)
 
 	if err != nil {
-		log.Println("222")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
 		return
 	}
-
-	log.Println("serverAddr : ", serverAddr)
-	log.Println("serverAddr : ", len(serverAddr))
 
 	milliseconds := expiry
 	err = dbHandler.Db.Get(&oauth, "SELECT client_id, expires_at, token from oauth_tokens where client_id = ? ", clientID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			_, err = dbHandler.Db.Exec("INSERT INTO oauth_tokens (token, client_id, expires_at, refresh_token, server_address) VALUES (?, ?, ?, ?, ? )", token, clientID, milliseconds, refreshToken, serverAddr)
-			if err != nil {
-				log.Println("333")
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
-				return
-			}
+			// _, err = dbHandler.Db.Exec("INSERT INTO oauth_tokens (token, client_id, expires_at, refresh_token, server_address) VALUES (?, ?, ?, ?, ? )", token, clientID, milliseconds, refreshToken, serverAddr)
+			// if err != nil {
+			// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
+			// 	return
+			// }
+			insertToken(c, token, clientID, milliseconds, refreshToken, serverAddr)
 		} else {
-			log.Println("444")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
 			return
 		}
 	} else {
 		getExpiresAt := oauth.ExpiresAT
 		nowMileSec := expiry
-		// 시간이 지났다
-
+		// 시간이 지나면 기존의 token 에 delete 하고 새롭게 insert 하여 client id 당 1개의 토큰을 유지한다.
 		if nowMileSec > getExpiresAt {
+
+			res := deleteToken(c, clientID)
+			if res {
+				insertToken(c, token, clientID, milliseconds, refreshToken, serverAddr)
+			}
 			_, err = dbHandler.Db.Exec("UPDATE oauth_tokens SET token = ? , expires_at = ? where client_id = ? ", token, milliseconds, clientID)
 			if err != nil {
-				log.Println("555")
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
 				return
 			}
@@ -96,6 +92,49 @@ func tokenHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"access_token": token, "refresh_token": refreshToken, "token_type": "bearer", "expires_in": milliseconds})
+}
+
+/*
+Description : 토큰 등록
+Params      : gin.Context
+Params      : token
+Params      : clientId
+Params      : expired date
+Params      : serverAddr
+return      : bool
+Author      : ssjpooh
+Date        : 2023-10-26
+*/
+func insertToken(c *gin.Context, token string, clientID string, milliseconds int64, refreshToken string, serverAddr string) bool {
+
+	_, err := dbHandler.Db.Exec("INSERT INTO oauth_tokens (token, client_id, expires_at, refresh_token, server_address) VALUES (?, ?, ?, ?, ? )", token, clientID, milliseconds, refreshToken, serverAddr)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
+		return false
+	} else {
+		return true
+	}
+
+}
+
+/*
+Description : 토큰 삭제
+Params      : gin.Context
+Params      : clientId
+return      : bool
+Author      : ssjpooh
+Date        : 2023-10-26
+*/
+func deleteToken(c *gin.Context, clientID string) bool {
+
+	_, err := dbHandler.Db.Exec("DELETE FROM OAUTH_TOKENS WHERE CLIENT_ID = ? ", clientID)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
+		return false
+	} else {
+		return true
+	}
 }
 
 func generateToken(c *gin.Context, exp int64) (string, string, string, error) {
