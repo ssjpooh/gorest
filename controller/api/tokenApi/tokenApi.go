@@ -79,11 +79,11 @@ func tokenHandler(c *gin.Context) {
 			if res {
 				insertToken(c, token, clientID, milliseconds, refreshToken, serverAddr)
 			}
-			_, err = dbHandler.Db.Exec("UPDATE oauth_tokens SET token = ? , expires_at = ? where client_id = ? ", token, milliseconds, clientID)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
-				return
-			}
+			// _, err = dbHandler.Db.Exec("UPDATE oauth_tokens SET token = ? , expires_at = ? where client_id = ? ", token, milliseconds, clientID)
+			// if err != nil {
+			// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
+			// 	return
+			// }
 		} else {
 			// 안지 났다
 			token = oauth.Token
