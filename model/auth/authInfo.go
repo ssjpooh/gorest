@@ -16,10 +16,9 @@ type OauthInfo struct {
 var JWTKey = []byte("FOXEduP@ssW0rd")
 
 type AuthInfo struct {
-	OwnerIdx      string
+	ClientId      string
 	ExpiredDt     int64
 	LastRequestDt int64
 	CallCount     int
 	ServerAddr    string
-	RequestedAddr string
 }

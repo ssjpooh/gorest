@@ -8,13 +8,17 @@ import (
 
 	tokenapi "restApi/controller/api/tokenApi"
 	memberApi "restApi/controller/authApi/memberApi"
+	memoryApi "restApi/controller/authApi/memoryApi"
 	roomApi "restApi/controller/authApi/roomApi"
+
 	dbHandler "restApi/util/db"
 
 	_ "restApi/docs"
 
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+
+	gmap "restApi/util/memory"
 )
 
 // @title Swagger Example API
@@ -29,6 +33,9 @@ import (
 // @name Authorization
 func main() {
 
+	// map 설정
+	gmap.Init()
+
 	dbHandler.DbConnect()
 	defer dbHandler.Db.Close()
 
@@ -41,6 +48,7 @@ func main() {
 	v1 := router.Group("/v1")
 	memberApi.MmberApiHandler(v1)
 	roomApi.RoomApiHandler(v1)
+	memoryApi.MemoryApiHaneler(v1)
 
 	url := ginSwagger.URL("https://local.foxedu.kr:443/swagger/doc.json") // The url pointing to API definition
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, url))
