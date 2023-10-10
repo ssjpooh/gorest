@@ -2,7 +2,6 @@ package tokenapi
 
 import (
 	"database/sql"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -19,8 +18,7 @@ import (
 )
 
 const (
-	// TokenExpiry = 3600 // 1 hour in seconds
-	TokenExpiry = 300 // 1 hour in seconds
+	TokenExpiry = 3600 // 1 hour in seconds
 )
 
 var expiry = time.Now().Add(time.Second * TokenExpiry).Unix()
@@ -125,7 +123,7 @@ func tokenHandler(c *gin.Context) {
 	err = dbHandler.Db.Get(&oauth, "SELECT client_id, expires_at, token from oauth_tokens where client_id = ? ", clientID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			log.Println("111111111111111111")
+
 			gmap.SetAuthInfo(token, clientID, serverAddr, 0, milliseconds, time.Now().Unix())
 			res = insertToken(c, token, clientID, milliseconds, refreshToken, serverAddr)
 		} else {

@@ -43,9 +43,6 @@ func Authenticate(c *gin.Context) {
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 		requested := claims["requested"].(string)
 		if requested != c.RemoteIP() {
-			log.Println()
-			log.Println("requested  : ", requested)
-			log.Println("c.RemoteIP() : ", c.RemoteIP())
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid_token"})
 			return
 		}
@@ -69,7 +66,6 @@ func Authenticate(c *gin.Context) {
 
 	log.Println("time.Now().Unix() : ", time.Now().Unix())
 	log.Println("auth.LastRequestDt : ", auth.LastRequestDt)
-
 	log.Println("calc : ", time.Now().Unix()-auth.LastRequestDt)
 	if time.Now().Unix()-auth.LastRequestDt < 1000 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "too many call error"})
@@ -79,7 +75,6 @@ func Authenticate(c *gin.Context) {
 	// 호출 카운트 추가 및 마지막 호출 시간 초기화
 	auth.CallCount = auth.CallCount + 1
 	auth.LastRequestDt = time.Now().Unix()
-	log.Println("3333333333333333")
 	memory.SetAuthInfo(bearerToken, auth.ClientId, auth.ServerAddr, auth.CallCount, auth.ExpiredDt, auth.LastRequestDt)
 
 	c.Next()

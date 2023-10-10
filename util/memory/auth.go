@@ -1,7 +1,6 @@
 package memory
 
 import (
-	"log"
 	oauthInfo "restApi/model/auth"
 	dbHandler "restApi/util/db"
 	"time"
@@ -53,17 +52,13 @@ Date        : 2023.10.10
 */
 func GetAuthInfo(token string) oauthInfo.AuthInfo {
 
-	log.Println("get token : ", token)
 	if authInfo, exists := GlobalAuthInfoMap[token]; exists {
-		log.Println("::::::::: exist :::::::::")
 		return authInfo
 	} else {
-		log.Println("::::::::: not exist :::::::::")
 		var oauth oauthInfo.OauthInfo
 		err := dbHandler.Db.Get(&oauth, "SELECT refresh_token, client_id, expires_at, token, server_address from oauth_tokens where token = ? ", token)
 
 		if err != nil {
-			log.Println("4444444444444444")
 			SetAuthInfo(oauth.Token, oauth.ClientID, oauth.ServerAddr, 0, oauth.ExpiresAT, time.Now().Unix())
 		}
 
@@ -84,8 +79,6 @@ Author      : ssjpooh
 Date        : 2023.10.10
 */
 func SetAuthInfo(token string, clientId string, serverAddr string, callCount int, expiredDt int64, lastRequestDt int64) {
-	log.Println("222222222222222")
-	log.Println("set token : ", token)
 	GlobalAuthInfoMap[token] = oauthInfo.AuthInfo{ClientId: clientId, ServerAddr: serverAddr, CallCount: callCount, ExpiredDt: expiredDt, LastRequestDt: lastRequestDt}
 }
 
@@ -103,9 +96,7 @@ func DelAuthInfo(token string) {
 
 func PatchAuthInfo(beforeToken, newToken string) {
 
-	log.Println("get token : ", beforeToken)
 	if authInfo, exists := GlobalAuthInfoMap[beforeToken]; exists {
-		log.Println("::::::::: exist :::::::::")
 		GlobalAuthInfoMap[newToken] = oauthInfo.AuthInfo{ClientId: authInfo.ClientId, ServerAddr: authInfo.ServerAddr, CallCount: authInfo.CallCount, ExpiredDt: authInfo.ExpiredDt, LastRequestDt: authInfo.LastRequestDt}
 		delete(GlobalAuthInfoMap, beforeToken)
 	}
