@@ -10,6 +10,13 @@ import (
 
 var Db *sqlx.DB
 
+/*
+Description : db 접속
+Params      : lastRequestDt
+return      :
+Author      : ssjpooh
+Date        : 2023.10.10
+*/
 func DbConnect() {
 
 	var err error

@@ -3,15 +3,17 @@ package tokenapi
 import (
 	"database/sql"
 	"net/http"
+	"strings"
 	"time"
 
-	outhInfo "restApi/model/auth"
+	oauthInfo "restApi/model/auth"
 	"restApi/util"
 	dbHandler "restApi/util/db"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 
+	authHandler "restApi/util/auth"
 	gmap "restApi/util/memory"
 )
 
@@ -21,18 +23,78 @@ const (
 
 var expiry = time.Now().Add(time.Second * TokenExpiry).Unix()
 
-func TokenApiHandler(route *gin.Engine) {
+func TokenApiHandler(router *gin.Engine) {
 
-	route.POST("/oauth/token", tokenHandler)
+	router.POST("/oauth/token", tokenHandler)
+
+	v1 := router.Group("/v1")
+	v1.POST("/oauth/refresh", authHandler.Authenticate, refreshTokenHandler)
 }
 
-// description : token 발급
+func refreshTokenHandler(c *gin.Context) {
+
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "authorization_header_missing"})
+		return
+	}
+
+	bearerToken := strings.Trim(authHeader[len("Bearer "):], " ")
+	res := true
+	refresh := c.PostForm("refresh_token")
+
+	token, err := jwt.Parse(refresh, func(token *jwt.Token) (interface{}, error) {
+		return oauthInfo.JWTKey, nil
+	})
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid refresh token"})
+		return
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		// Create a new access token using the same claims
+		newToken := jwt.New(jwt.SigningMethodHS256)
+		newClaims := newToken.Claims.(jwt.MapClaims)
+		for key, val := range claims {
+			newClaims[key] = val
+		}
+		newClaims["exp"] = expiry
+		token, err := newToken.SignedString(oauthInfo.JWTKey)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "refresh token signeture"})
+			return
+		}
+
+		// newToken 을 넣자
+		var oauth oauthInfo.OauthInfo
+		err = dbHandler.Db.Get(&oauth, "SELECT refresh_token, client_id, expires_at, token, server_address from oauth_tokens where refresh_token = ? ", refresh)
+		if err != nil {
+			// 오류
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "search refresh token"})
+			return
+		} else {
+			res = updateToken(c, token, oauth.ClientID)
+		}
+
+		if res {
+			gmap.PatchAuthInfo(bearerToken, token)
+		}
+	}
+}
+
+/*
+Description : JWT token 발급
+Params      : gin.Context
+return      : JSON(token info)
+Author      : ssjpooh
+Date        : 2023.10.10
+*/
 func tokenHandler(c *gin.Context) {
 	res := true
 	clientID := c.PostForm("client_id")
 	clientSecret := c.PostForm("client_secret")
 
-	var client outhInfo.ClientDetails
+	var client oauthInfo.ClientDetails
 	err := dbHandler.Db.Get(&client, "SELECT client_id, client_secret FROM oauth_client_details WHERE client_id=?", clientID)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -48,7 +110,7 @@ func tokenHandler(c *gin.Context) {
 		return
 	}
 
-	var oauth outhInfo.OauthInfo
+	var oauth oauthInfo.OauthInfo
 
 	token, refreshToken, serverAddr, err := generateToken(c, expiry)
 
@@ -61,6 +123,7 @@ func tokenHandler(c *gin.Context) {
 	err = dbHandler.Db.Get(&oauth, "SELECT client_id, expires_at, token from oauth_tokens where client_id = ? ", clientID)
 	if err != nil {
 		if err == sql.ErrNoRows {
+
 			gmap.SetAuthInfo(token, clientID, serverAddr, 0, milliseconds, time.Now().Unix())
 			res = insertToken(c, token, clientID, milliseconds, refreshToken, serverAddr)
 		} else {
@@ -116,6 +179,16 @@ func insertToken(c *gin.Context, token string, clientID string, milliseconds int
 
 }
 
+func updateToken(c *gin.Context, token, clientId string) bool {
+	_, err := dbHandler.Db.Exec("UPDATE OAUTH_TOKENS SET TOKEN = ? WHERE CLIENT_ID = ? ", token, clientId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error update tokens"})
+		return false
+	} else {
+		return true
+	}
+}
+
 /*
 Description : 토큰 삭제
 Params      : gin.Context
@@ -136,6 +209,17 @@ func deleteToken(c *gin.Context, clientID string) bool {
 	}
 }
 
+/*
+Description : JWT token 생성
+Params      : gin.Context
+Params      : expire Date
+return      : token
+return      : refresh token
+return      : add server address
+return      : error
+Author      : ssjpooh
+Date        : 2023.10.10
+*/
 func generateToken(c *gin.Context, exp int64) (string, string, string, error) {
 
 	token := jwt.New(jwt.SigningMethodHS256)
@@ -147,7 +231,7 @@ func generateToken(c *gin.Context, exp int64) (string, string, string, error) {
 	claims["requested"] = c.RemoteIP()
 	claims["server"] = serverAddr
 
-	tokenString, err := token.SignedString(outhInfo.JWTKey)
+	tokenString, err := token.SignedString(oauthInfo.JWTKey)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -157,7 +241,7 @@ func generateToken(c *gin.Context, exp int64) (string, string, string, error) {
 	rtClaims["sub"] = "ssj"
 	rtClaims["exp"] = time.Now().Add(time.Second * TokenExpiry * 24).Unix()
 
-	rt, err := refreshToken.SignedString(outhInfo.JWTKey)
+	rt, err := refreshToken.SignedString(oauthInfo.JWTKey)
 	if err != nil {
 		return "", "", "", err
 	}
