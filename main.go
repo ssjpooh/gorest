@@ -19,6 +19,8 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 
 	gmap "restApi/util/memory"
+
+	options "restApi/util/options"
 )
 
 // @title Swagger Example API
@@ -35,6 +37,9 @@ func main() {
 
 	// map 설정
 	gmap.Init()
+
+	// option 설정
+	options.Init()
 
 	dbHandler.DbConnect()
 	defer dbHandler.Db.Close()
