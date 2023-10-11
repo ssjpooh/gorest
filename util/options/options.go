@@ -1,14 +1,14 @@
 package option
 
 import (
-	"fmt"
-	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/magiconair/properties"
 
 	options "restApi/model/options"
+	logger "restApi/util/log"
 )
 
 var Prop options.OptionsInfo
@@ -23,7 +23,7 @@ func Init() {
 		// 프로젝트 루트 디렉토리 경로 설정
 		exePath, err := os.Executable()
 		if err != nil {
-			fmt.Println("Error getting executable path:", err)
+			logger.Logger(logger.GetFuncNm(), "[err],  Error getting executable path:", err.Error())
 			return
 		}
 		// 실행 파일의 디렉토리 경로 가져오기
@@ -36,16 +36,18 @@ func Init() {
 	// .properties 파일 경로 설정
 	configFile := filepath.Join(projectDir, "options.properties")
 
-	log.Println("configFile : ", configFile)
+	logger.Logger(logger.GetFuncNm(), "optionFilePath : ", configFile)
 	// .properties 파일 읽기
 	p, err := properties.LoadFile(configFile, properties.UTF8)
 	if err != nil {
-		fmt.Println("Error reading .properties file:", err)
+		logger.Logger(logger.GetFuncNm(), "[err] Error reading .properties file:", err.Error())
 	}
 
 	// 설정 값 읽기
-	Prop.Url = p.GetString("db_url", "") // 기본값을 ""로 설정
-	Prop.Id = p.GetString("db_id", "")
-	Prop.Pw = p.GetString("db_pw", "")
-	Prop.Name = p.GetString("db_nm", "")
+	Prop.Url = strings.TrimSpace(p.GetString("db_url", "")) // 기본값을 ""로 설정
+	Prop.Id = strings.TrimSpace(p.GetString("db_id", ""))
+	Prop.Pw = strings.TrimSpace(p.GetString("db_pw", ""))
+	Prop.Name = strings.TrimSpace(p.GetString("db_nm", ""))
+
+	logger.Logger(logger.GetFuncNm(), "option Init Success")
 }

@@ -1,9 +1,13 @@
 package memory
 
 import (
+	"fmt"
+	"log"
 	oauthInfo "restApi/model/auth"
 	dbHandler "restApi/util/db"
 	"time"
+
+	logger "restApi/util/log"
 )
 
 type AuthInfoMap map[string]oauthInfo.AuthInfo
@@ -26,6 +30,7 @@ func Init() {
 			checkGlobalMap()
 		}
 	}()
+	logger.Logger(logger.GetFuncNm(), "Global Map setting Success")
 }
 
 /*
@@ -38,7 +43,9 @@ Date        : 2023.10.10
 func checkGlobalMap() {
 	for key := range GlobalAuthInfoMap {
 		if GlobalAuthInfoMap[key].ExpiredDt < time.Now().Unix() {
-			delete(GlobalAuthInfoMap, key)
+			logger.Logger(logger.GetFuncNm(), fmt.Sprintf("expire date : %d , now : %d", GlobalAuthInfoMap[key].ExpiredDt, time.Now().Unix()))
+			logger.Logger(logger.GetFuncNm(), "delete map key :", key)
+			DelAuthInfo(key)
 		}
 	}
 }
@@ -55,12 +62,14 @@ func GetAuthInfo(token string) oauthInfo.AuthInfo {
 	if authInfo, exists := GlobalAuthInfoMap[token]; exists {
 		return authInfo
 	} else {
+		logger.Logger(logger.GetFuncNm(), "GetAuthInfo not exitst")
 		var oauth oauthInfo.OauthInfo
 		err := dbHandler.Db.Get(&oauth, "SELECT refresh_token, client_id, expires_at, token, server_address from oauth_tokens where token = ? ", token)
-
+		logger.Logger(logger.GetFuncNm(), "search token Info by token : ", token)
 		if err != nil {
-			SetAuthInfo(oauth.Token, oauth.ClientID, oauth.ServerAddr, 0, oauth.ExpiresAT, time.Now().Unix())
+			log.Println("select error :", err)
 		}
+		SetAuthInfo(oauth.Token, oauth.ClientID, oauth.ServerAddr, 0, oauth.ExpiresAT, time.Now().Unix())
 
 		return GlobalAuthInfoMap[token]
 	}
@@ -79,6 +88,7 @@ Author      : ssjpooh
 Date        : 2023.10.10
 */
 func SetAuthInfo(token string, clientId string, serverAddr string, callCount int, expiredDt int64, lastRequestDt int64) {
+	logger.Logger(logger.GetFuncNm(), "Set Global Map : ", token)
 	GlobalAuthInfoMap[token] = oauthInfo.AuthInfo{ClientId: clientId, ServerAddr: serverAddr, CallCount: callCount, ExpiredDt: expiredDt, LastRequestDt: lastRequestDt}
 }
 
@@ -90,7 +100,7 @@ Author      : ssjpooh
 Date        : 2023.10.10
 */
 func DelAuthInfo(token string) {
-
+	dbHandler.Db.Exec("DELETE FROM OAUTH_TOKENS WHERE TOKEN = ? ", token)
 	delete(GlobalAuthInfoMap, token)
 }
 

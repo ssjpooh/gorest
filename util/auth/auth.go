@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,6 +12,8 @@ import (
 	memory "restApi/util/memory"
 
 	"github.com/dgrijalva/jwt-go"
+
+	logger "restApi/util/log"
 )
 
 /*
@@ -60,15 +62,16 @@ func Authenticate(c *gin.Context) {
 	auth := memory.GetAuthInfo(bearerToken)
 
 	if auth.CallCount > 50 {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "too many call error"})
+		logger.Logger(logger.GetFuncNm(), strconv.Itoa(auth.CallCount))
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "too many call by call Count error"})
 		return
 	}
 
-	log.Println("time.Now().Unix() : ", time.Now().Unix())
-	log.Println("auth.LastRequestDt : ", auth.LastRequestDt)
-	log.Println("calc : ", time.Now().Unix()-auth.LastRequestDt)
-	if time.Now().Unix()-auth.LastRequestDt < 1000 {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "too many call error"})
+	if time.Now().Unix()-auth.LastRequestDt <= 2 {
+		logger.Logger(logger.GetFuncNm(), strconv.FormatInt(time.Now().Unix(), 10))
+		logger.Logger(logger.GetFuncNm(), strconv.FormatInt(auth.LastRequestDt, 10))
+		logger.Logger(logger.GetFuncNm(), strconv.FormatInt(time.Now().Unix()-auth.LastRequestDt, 10))
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "too earily call by lastRequestd Date error"})
 		return
 	}
 

@@ -19,9 +19,8 @@ import (
 
 const (
 	TokenExpiry = 3600 // 1 hour in seconds
+	// TokenExpiry = 180
 )
-
-var expiry = time.Now().Add(time.Second * TokenExpiry).Unix()
 
 func TokenApiHandler(router *gin.Engine) {
 
@@ -51,6 +50,7 @@ func refreshTokenHandler(c *gin.Context) {
 		return
 	}
 
+	var expiry = time.Now().Add(time.Second * TokenExpiry).Unix()
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 		// Create a new access token using the same claims
 		newToken := jwt.New(jwt.SigningMethodHS256)
@@ -90,11 +90,13 @@ Author      : ssjpooh
 Date        : 2023.10.10
 */
 func tokenHandler(c *gin.Context) {
+
 	res := true
 	clientID := c.PostForm("client_id")
 	clientSecret := c.PostForm("client_secret")
 
 	var client oauthInfo.ClientDetails
+
 	err := dbHandler.Db.Get(&client, "SELECT client_id, client_secret FROM oauth_client_details WHERE client_id=?", clientID)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -111,7 +113,7 @@ func tokenHandler(c *gin.Context) {
 	}
 
 	var oauth oauthInfo.OauthInfo
-
+	var expiry = time.Now().Add(time.Second * TokenExpiry).Unix()
 	token, refreshToken, serverAddr, err := generateToken(c, expiry)
 
 	if err != nil {
@@ -139,15 +141,12 @@ func tokenHandler(c *gin.Context) {
 			if res {
 				res = insertToken(c, token, clientID, milliseconds, refreshToken, serverAddr)
 			}
-			// _, err = dbHandler.Db.Exec("UPDATE oauth_tokens SET token = ? , expires_at = ? where client_id = ? ", token, milliseconds, clientID)
-			// if err != nil {
-			// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
-			// 	return
-			// }
 		} else {
 			// 안지 났다
 			token = oauth.Token
 			milliseconds = oauth.ExpiresAT
+
+			gmap.GetAuthInfo(token)
 		}
 	}
 

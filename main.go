@@ -20,6 +20,7 @@ import (
 
 	gmap "restApi/util/memory"
 
+	logger "restApi/util/log"
 	options "restApi/util/options"
 )
 
@@ -35,6 +36,7 @@ import (
 // @name Authorization
 func main() {
 
+	logger.Logger(logger.GetFuncNm(), "main Start")
 	// map 설정
 	gmap.Init()
 
