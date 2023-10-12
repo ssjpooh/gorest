@@ -3,17 +3,16 @@ package tokenapi
 import (
 	"database/sql"
 	"net/http"
-	"strings"
 	"time"
 
 	oauthInfo "restApi/model/auth"
 	"restApi/util"
 	dbHandler "restApi/util/db"
+	logger "restApi/util/log"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 
-	authHandler "restApi/util/auth"
 	gmap "restApi/util/memory"
 )
 
@@ -25,20 +24,11 @@ const (
 func TokenApiHandler(router *gin.Engine) {
 
 	router.POST("/oauth/token", tokenHandler)
-
-	v1 := router.Group("/v1")
-	v1.POST("/oauth/refresh", authHandler.Authenticate, refreshTokenHandler)
+	router.POST("/oauth/refresh", refreshTokenHandler)
 }
 
 func refreshTokenHandler(c *gin.Context) {
-
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "authorization_header_missing"})
-		return
-	}
-
-	bearerToken := strings.Trim(authHeader[len("Bearer "):], " ")
+	clientId := ""
 	res := true
 	refresh := c.PostForm("refresh_token")
 
@@ -52,6 +42,7 @@ func refreshTokenHandler(c *gin.Context) {
 
 	var expiry = time.Now().Add(time.Second * TokenExpiry).Unix()
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		clientId = claims["clientId"].(string)
 		// Create a new access token using the same claims
 		newToken := jwt.New(jwt.SigningMethodHS256)
 		newClaims := newToken.Claims.(jwt.MapClaims)
@@ -59,6 +50,7 @@ func refreshTokenHandler(c *gin.Context) {
 			newClaims[key] = val
 		}
 		newClaims["exp"] = expiry
+
 		token, err := newToken.SignedString(oauthInfo.JWTKey)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "refresh token signeture"})
@@ -66,18 +58,15 @@ func refreshTokenHandler(c *gin.Context) {
 		}
 
 		// newToken 을 넣자
-		var oauth oauthInfo.OauthInfo
-		err = dbHandler.Db.Get(&oauth, "SELECT refresh_token, client_id, expires_at, token, server_address from oauth_tokens where refresh_token = ? ", refresh)
-		if err != nil {
-			// 오류
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "search refresh token"})
-			return
-		} else {
-			res = updateToken(c, token, oauth.ClientID)
-		}
-
+		res = deleteRefreshToken(c, refresh)
 		if res {
-			gmap.PatchAuthInfo(bearerToken, token)
+			res = insertToken(c, token, clientId, expiry, refresh, util.GetLocalIP())
+			if !res {
+				logger.Logger(logger.GetFuncNm(), "refresh token insert err")
+				return
+			} else {
+				c.JSON(http.StatusOK, gin.H{"access_token": token, "refresh_token": refresh, "token_type": "bearer", "expires_in": expiry})
+			}
 		}
 	}
 }
@@ -114,7 +103,7 @@ func tokenHandler(c *gin.Context) {
 
 	var oauth oauthInfo.OauthInfo
 	var expiry = time.Now().Add(time.Second * TokenExpiry).Unix()
-	token, refreshToken, serverAddr, err := generateToken(c, expiry)
+	token, refreshToken, serverAddr, err := generateToken(c, expiry, clientID)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error generator token"})
@@ -125,8 +114,6 @@ func tokenHandler(c *gin.Context) {
 	err = dbHandler.Db.Get(&oauth, "SELECT client_id, expires_at, token from oauth_tokens where client_id = ? ", clientID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-
-			gmap.SetAuthInfo(token, clientID, serverAddr, 0, milliseconds, time.Now().Unix())
 			res = insertToken(c, token, clientID, milliseconds, refreshToken, serverAddr)
 		} else {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error select oauth tokens error "})
@@ -145,7 +132,6 @@ func tokenHandler(c *gin.Context) {
 			// 안지 났다
 			token = oauth.Token
 			milliseconds = oauth.ExpiresAT
-
 			gmap.GetAuthInfo(token)
 		}
 	}
@@ -173,6 +159,7 @@ func insertToken(c *gin.Context, token string, clientID string, milliseconds int
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error insert tokens"})
 		return false
 	} else {
+		gmap.SetAuthInfo(token, clientID, serverAddr, 0, milliseconds, time.Now().Unix())
 		return true
 	}
 
@@ -209,6 +196,25 @@ func deleteToken(c *gin.Context, clientID string) bool {
 }
 
 /*
+Description : 리프레시 토큰 삭제
+Params      : gin.Context
+Params      : refresh token
+return      : bool
+Author      : ssjpooh
+Date        : 2023-10-12
+*/
+func deleteRefreshToken(c *gin.Context, refreshToken string) bool {
+	_, err := dbHandler.Db.Exec("DELETE FROM OAUTH_TOKENS WHERE REFRESH_TOKEN = ? ", refreshToken)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error delete refresh tokens"})
+		return false
+	} else {
+		return true
+	}
+}
+
+/*
 Description : JWT token 생성
 Params      : gin.Context
 Params      : expire Date
@@ -219,7 +225,7 @@ return      : error
 Author      : ssjpooh
 Date        : 2023.10.10
 */
-func generateToken(c *gin.Context, exp int64) (string, string, string, error) {
+func generateToken(c *gin.Context, exp int64, clientId string) (string, string, string, error) {
 
 	token := jwt.New(jwt.SigningMethodHS256)
 	serverAddr := util.GetLocalIP()
@@ -238,6 +244,7 @@ func generateToken(c *gin.Context, exp int64) (string, string, string, error) {
 	refreshToken := jwt.New(jwt.SigningMethodHS256)
 	rtClaims := refreshToken.Claims.(jwt.MapClaims)
 	rtClaims["sub"] = "ssj"
+	rtClaims["clientId"] = clientId
 	rtClaims["exp"] = time.Now().Add(time.Second * TokenExpiry * 24).Unix()
 
 	rt, err := refreshToken.SignedString(oauthInfo.JWTKey)

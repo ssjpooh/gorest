@@ -4,10 +4,10 @@ import (
 	"database/sql"
 	"net/http"
 
-	"log"
 	members "restApi/model/members"
 
 	dbHandler "restApi/util/db"
+	logger "restApi/util/log"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -35,7 +35,7 @@ func getMemberList(context *gin.Context) []members.Member {
 	err := dbHandler.Db.Select(&userList, query)
 	if err != nil {
 		context.IndentedJSON(http.StatusNotFound, gin.H{"message": "not Found"})
-		log.Print(err)
+		logger.Logger(logger.GetFuncNm(), "select error ", err.Error())
 	}
 
 	return userList
@@ -49,7 +49,7 @@ func getMemberInfo(context *gin.Context, id string) members.Member {
 	err := dbHandler.Db.Get(&userInfo, query, id)
 	if err != nil {
 		context.IndentedJSON(http.StatusNotFound, gin.H{"message": "not Found"})
-		log.Print(err)
+		logger.Logger(logger.GetFuncNm(), "select error :", err.Error())
 		return userInfo
 	}
 
@@ -62,7 +62,7 @@ func inserMemberInfo(context *gin.Context) sql.Result {
 	err := context.ShouldBindJSON(&newUser)
 	if err != nil {
 		context.IndentedJSON(http.StatusBadRequest, gin.H{"message": "bad request"})
-		log.Print(err)
+		logger.Logger(logger.GetFuncNm(), "insert error : ", err.Error())
 	}
 
 	query := "INSERT INTO USER_TBL (owner_idx, user_id, user_passwd, kor_user_name, eng_user_name ) values (?, ? , ? , ? , ?)"
@@ -70,7 +70,7 @@ func inserMemberInfo(context *gin.Context) sql.Result {
 	// 비밀번호를 해싱
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newUser.PASSWD), bcrypt.DefaultCost)
 	if err != nil {
-		log.Print(err)
+		logger.Logger(logger.GetFuncNm(), " password hash error : ", err.Error())
 	}
 
 	// 무작위 UUID 생성
@@ -78,7 +78,7 @@ func inserMemberInfo(context *gin.Context) sql.Result {
 	result, err := dbHandler.Db.Exec(query, ownerIdx, newUser.ID, hashedPassword, newUser.KORName, newUser.ENGName)
 	if err != nil {
 		context.IndentedJSON(http.StatusBadRequest, gin.H{"message": "bad request"})
-		log.Print(err)
+		logger.Logger(logger.GetFuncNm(), "insert error : ", err.Error())
 	}
 
 	insertOauth(context, ownerIdx)
@@ -97,7 +97,7 @@ func insertOauth(context *gin.Context, ownerIdx uuid.UUID) sql.Result {
 	result, err := dbHandler.Db.Exec(query, ownerIdx, clientId, clientSecret)
 	if err != nil {
 		context.IndentedJSON(http.StatusBadRequest, gin.H{"message": "bad request"})
-		log.Print(err)
+		logger.Logger(logger.GetFuncNm(), "insert error : ", err.Error())
 	}
 
 	return result
@@ -111,7 +111,7 @@ func patchMemeberInfo(context *gin.Context, id string) members.Member {
 	err := context.ShouldBindJSON(&newUser)
 	if err != nil {
 		context.IndentedJSON(http.StatusBadRequest, gin.H{"message": "bad request"})
-		log.Print(err)
+		logger.Logger(logger.GetFuncNm(), " patch error : ", err.Error())
 	}
 
 	if userInfo.ID == "" {
@@ -129,7 +129,7 @@ func patchMemeberInfo(context *gin.Context, id string) members.Member {
 		_, err := dbHandler.Db.Exec(query, userInfo.KORName, userInfo.ENGName, userInfo.ID)
 		if err != nil {
 			context.IndentedJSON(http.StatusBadRequest, gin.H{"message": "bad request"})
-			log.Print(err)
+			logger.Logger(logger.GetFuncNm(), "patch error : ", err.Error())
 		}
 
 	}

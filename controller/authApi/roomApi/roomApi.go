@@ -1,12 +1,13 @@
 package roomapi
 
 import (
-	"log"
 	"net/http"
 	authHandler "restApi/util/auth"
 
 	rooms "restApi/model/rooms"
 	dbHandler "restApi/util/db"
+
+	logger "restApi/util/log"
 
 	"github.com/gin-gonic/gin"
 )
@@ -19,7 +20,7 @@ func getRoomList(context *gin.Context) []rooms.Room {
 	err := dbHandler.Db.Select(&roomList, query)
 	if err != nil {
 		context.IndentedJSON(http.StatusNotFound, gin.H{"message": "not Found"})
-		log.Print(err)
+		logger.Logger(logger.GetFuncNm(), "select error : ", err.Error())
 	}
 
 	return roomList

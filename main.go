@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
@@ -24,6 +25,8 @@ import (
 	options "restApi/util/options"
 )
 
+var logFile = time.Now().Format("2006-01-02 15:04")
+
 // @title Swagger Example API
 // @version 1.0
 // @description This is a sample server celler server.
@@ -35,6 +38,8 @@ import (
 // @in header
 // @name Authorization
 func main() {
+
+	logger.SetFileName(logFile)
 
 	logger.Logger(logger.GetFuncNm(), "main Start")
 	// map 설정

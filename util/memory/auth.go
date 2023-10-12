@@ -2,7 +2,6 @@ package memory
 
 import (
 	"fmt"
-	"log"
 	oauthInfo "restApi/model/auth"
 	dbHandler "restApi/util/db"
 	"time"
@@ -41,10 +40,10 @@ Author      : ssjpooh
 Date        : 2023.10.10
 */
 func checkGlobalMap() {
+	logger.Logger(logger.GetFuncNm(), "is Alive")
 	for key := range GlobalAuthInfoMap {
 		if GlobalAuthInfoMap[key].ExpiredDt < time.Now().Unix() {
 			logger.Logger(logger.GetFuncNm(), fmt.Sprintf("expire date : %d , now : %d", GlobalAuthInfoMap[key].ExpiredDt, time.Now().Unix()))
-			logger.Logger(logger.GetFuncNm(), "delete map key :", key)
 			DelAuthInfo(key)
 		}
 	}
@@ -67,8 +66,9 @@ func GetAuthInfo(token string) oauthInfo.AuthInfo {
 		err := dbHandler.Db.Get(&oauth, "SELECT refresh_token, client_id, expires_at, token, server_address from oauth_tokens where token = ? ", token)
 		logger.Logger(logger.GetFuncNm(), "search token Info by token : ", token)
 		if err != nil {
-			log.Println("select error :", err)
+			logger.Logger(logger.GetFuncNm(), "select error :", err.Error())
 		}
+
 		SetAuthInfo(oauth.Token, oauth.ClientID, oauth.ServerAddr, 0, oauth.ExpiresAT, time.Now().Unix())
 
 		return GlobalAuthInfoMap[token]
@@ -100,12 +100,13 @@ Author      : ssjpooh
 Date        : 2023.10.10
 */
 func DelAuthInfo(token string) {
+	logger.Logger(logger.GetFuncNm(), "delete map key :", token)
 	dbHandler.Db.Exec("DELETE FROM OAUTH_TOKENS WHERE TOKEN = ? ", token)
 	delete(GlobalAuthInfoMap, token)
 }
 
 func PatchAuthInfo(beforeToken, newToken string) {
-
+	logger.Logger(logger.GetFuncNm(), "patch before map key :", beforeToken, " new map key : ", newToken)
 	if authInfo, exists := GlobalAuthInfoMap[beforeToken]; exists {
 		GlobalAuthInfoMap[newToken] = oauthInfo.AuthInfo{ClientId: authInfo.ClientId, ServerAddr: authInfo.ServerAddr, CallCount: authInfo.CallCount, ExpiredDt: authInfo.ExpiredDt, LastRequestDt: authInfo.LastRequestDt}
 		delete(GlobalAuthInfoMap, beforeToken)

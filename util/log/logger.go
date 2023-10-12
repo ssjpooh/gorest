@@ -7,8 +7,13 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"time"
 )
+
+var currentDate string
+
+func SetFileName(fileName string) {
+	currentDate = fileName
+}
 
 func Logger(method string, infos ...string) {
 
@@ -36,7 +41,6 @@ func Logger(method string, infos ...string) {
 	}
 
 	// 현재 날짜를 YYYY-MM-DD 형식으로 가져옵니다.
-	currentDate := time.Now().Format("2006-01-02 15:04")
 
 	// 로그 파일 이름을 현재 날짜로 설정합니다. 경로를 포함합니다.
 	logFilePath := filepath.Join(logDir, fmt.Sprintf("[restApi]_%s.log", currentDate))
