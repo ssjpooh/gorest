@@ -63,7 +63,7 @@ func GetAuthInfo(token string) oauthInfo.AuthInfo {
 	} else {
 		logger.Logger(logger.GetFuncNm(), "GetAuthInfo not exitst")
 		var oauth oauthInfo.OauthInfo
-		err := dbHandler.Db.Get(&oauth, "SELECT refresh_token, client_id, expires_at, token, server_address from oauth_tokens where token = ? ", token)
+		err := dbHandler.Db.Get(&oauth, "SELECT refresh_token, client_id, expires_at, token, server_address from OAUTH_CLIENT_TOKENS where token = ? ", token)
 		logger.Logger(logger.GetFuncNm(), "search token Info by token : ", token)
 		if err != nil {
 			logger.Logger(logger.GetFuncNm(), "select error :", err.Error())
@@ -101,7 +101,7 @@ Date        : 2023.10.10
 */
 func DelAuthInfo(token string) {
 	logger.Logger(logger.GetFuncNm(), "delete map key :", token)
-	dbHandler.Db.Exec("DELETE FROM OAUTH_TOKENS WHERE TOKEN = ? ", token)
+	dbHandler.Db.Exec("DELETE FROM OAUTH_CLIENT_TOKENS WHERE TOKEN = ? ", token)
 	delete(GlobalAuthInfoMap, token)
 }
 

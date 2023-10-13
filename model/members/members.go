@@ -1,5 +1,11 @@
 package members
 
+import (
+	"fmt"
+	db "restApi/util/db"
+	"strings"
+)
+
 type Member struct {
 	ID       string `db:"user_id"`
 	KORName  string `db:"kor_user_name"`
@@ -7,3 +13,5 @@ type Member struct {
 	PASSWD   string `db:"user_passwd"`
 	OWNERIDX string `db:"owner_idx"`
 }
+
+var MemberColumns = fmt.Sprintf(" %s ", strings.Join(db.ColumnsForStruct(Member{}), ", "))

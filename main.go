@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 
+	mobiletokenapi "restApi/controller/api/mobileTokenApi"
 	tokenapi "restApi/controller/api/tokenApi"
 	memberApi "restApi/controller/authApi/memberApi"
 	memoryApi "restApi/controller/authApi/memoryApi"
@@ -56,6 +57,7 @@ func main() {
 	// v1 그룸에 포함 되지 않는 api들
 	router.GET("/", indexHandler)
 	tokenapi.TokenApiHandler(router)
+	mobiletokenapi.MobileTokenApiHandler(router)
 
 	v1 := router.Group("/v1")
 	memberApi.MmberApiHandler(v1)
