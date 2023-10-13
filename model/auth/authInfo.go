@@ -28,6 +28,7 @@ type AuthInfo struct {
 	LastRequestDt int64
 	CallCount     int
 	ServerAddr    string
+	apiName       string
 }
 
 var OAuthClientDetailsColumns = fmt.Sprintf(" %s ", strings.Join(db.ColumnsForStruct(ClientDetails{}), ", "))
