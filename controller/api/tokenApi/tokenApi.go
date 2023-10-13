@@ -24,21 +24,20 @@ const (
 func TokenApiHandler(router *gin.Engine) {
 
 	router.POST("/oauth/token", tokenHandler)
-	router.POST("/oauth/refresh", RefreshTokenHandler)
+	router.POST("/oauth/refresh", refreshTokenHandler)
 }
 
 /*
-Description : refresh token 으로 JWT token 발급
+Description : global refresh token handler
 Params      : gin.Context
-return      : JSON(token info)
+return      : token json
 Author      : ssjpooh
-Date        : 2023.10.10
+Date        : 2023.10.13
 */
-func RefreshTokenHandler(c *gin.Context) {
+
+func RefreshTokenGlobalApi(c *gin.Context, refresh string) {
 	clientId := ""
 	res := true
-	refresh := c.PostForm("refresh_token")
-
 	token, err := jwt.Parse(refresh, func(token *jwt.Token) (interface{}, error) {
 		return oauthInfo.JWTKey, nil
 	})
@@ -78,7 +77,28 @@ func RefreshTokenHandler(c *gin.Context) {
 	}
 }
 
-func TokenApi(c *gin.Context, args ...string) {
+/*
+Description : refresh token 으로 JWT token 발급
+Params      : gin.Context
+return      : JSON(token info)
+Author      : ssjpooh
+Date        : 2023.10.10
+*/
+func refreshTokenHandler(c *gin.Context) {
+
+	refresh := c.PostForm("refresh_token")
+	RefreshTokenGlobalApi(c, refresh)
+
+}
+
+/*
+Description : global token handler
+Params      : gin.Context
+return      : token json
+Author      : ssjpooh
+Date        : 2023.10.13
+*/
+func TokenGlobalApi(c *gin.Context, args ...string) {
 
 	var clientID string
 	var clientSecret string
@@ -171,7 +191,7 @@ func tokenHandler(c *gin.Context) {
 	clientID := c.PostForm("client_id")
 	clientSecret := c.PostForm("client_secret")
 
-	TokenApi(c, clientID, clientSecret)
+	TokenGlobalApi(c, clientID, clientSecret)
 }
 
 /*

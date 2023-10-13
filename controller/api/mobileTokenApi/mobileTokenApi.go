@@ -20,6 +20,13 @@ func MobileTokenApiHandler(router *gin.Engine) {
 	router.POST("/mobile/oauth/refresh", refreshTokenHandler)
 }
 
+/*
+Description : mobile token handler
+Params      : gin.Context
+return      : token json
+Author      : ssjpooh
+Date        : 2023.10.13
+*/
 func tokenHandler(c *gin.Context) {
 
 	clientID := c.PostForm("client_id")
@@ -33,7 +40,7 @@ func tokenHandler(c *gin.Context) {
 	}
 
 	if userId == "" || userPw == "" {
-		token.TokenApi(c, clientID, clientSecret)
+		token.TokenGlobalApi(c, clientID, clientSecret)
 	} else {
 		logger.Logger(logger.GetFuncNm(), "mobile token with user_id : ", userId)
 		// 모바일용으로 id / pw 로 client id / secret 을 받아서 새로 설정 한다.
@@ -70,11 +77,20 @@ func tokenHandler(c *gin.Context) {
 		}
 
 		// 임의의 POST 데이터 생성
-		token.TokenApi(c, oauthClientDetails.ClientID, oauthClientDetails.ClientSecret)
+		token.TokenGlobalApi(c, oauthClientDetails.ClientID, oauthClientDetails.ClientSecret)
 	}
 
 }
 
+/*
+Description : mobile refresh token handler
+Params      : gin.Context
+return      : token json
+Author      : ssjpooh
+Date        : 2023.10.13
+*/
 func refreshTokenHandler(c *gin.Context) {
 
+	refresh := c.PostForm("refresh_token")
+	token.RefreshTokenGlobalApi(c, refresh)
 }
