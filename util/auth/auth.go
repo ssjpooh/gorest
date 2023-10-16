@@ -59,7 +59,11 @@ func Authenticate(c *gin.Context) {
 
 	// 여기서 부터 추가 검증 ( count / 및 last request date )
 
-	auth := memory.GetAuthInfo(bearerToken)
+	auth, err := memory.GetAuthInfo(bearerToken, c.Request.RequestURI)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid_token"})
+		return
+	}
 
 	if auth.CallCount > 50 {
 		logger.Logger(logger.GetFuncNm(), strconv.Itoa(auth.CallCount))
@@ -67,7 +71,8 @@ func Authenticate(c *gin.Context) {
 		return
 	}
 
-	if time.Now().Unix()-auth.LastRequestDt <= 2 {
+	logger.Logger(logger.GetFuncNm(), " data :  request uri : ", c.Request.RequestURI, "  auth.ApiName : ", auth.ApiName)
+	if time.Now().Unix()-auth.LastRequestDt <= 2 && auth.ApiName == c.Request.RequestURI {
 		logger.Logger(logger.GetFuncNm(), strconv.FormatInt(time.Now().Unix(), 10))
 		logger.Logger(logger.GetFuncNm(), strconv.FormatInt(auth.LastRequestDt, 10))
 		logger.Logger(logger.GetFuncNm(), strconv.FormatInt(time.Now().Unix()-auth.LastRequestDt, 10))
@@ -78,7 +83,8 @@ func Authenticate(c *gin.Context) {
 	// 호출 카운트 추가 및 마지막 호출 시간 초기화
 	auth.CallCount = auth.CallCount + 1
 	auth.LastRequestDt = time.Now().Unix()
-	memory.SetAuthInfo(bearerToken, auth.ClientId, auth.ServerAddr, auth.CallCount, auth.ExpiredDt, auth.LastRequestDt)
+	auth.ApiName = c.Request.RequestURI
+	memory.SetAuthInfo(bearerToken, auth.ClientId, auth.ServerAddr, auth.CallCount, auth.ExpiredDt, auth.LastRequestDt, auth.ApiName)
 
 	c.Next()
 }

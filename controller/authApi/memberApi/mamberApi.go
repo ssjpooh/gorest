@@ -144,6 +144,16 @@ func MmberApiHandler(v1 *gin.RouterGroup) {
 		context.IndentedJSON(http.StatusOK, userList)
 	})
 
+	v1.GET("/members2", authHandler.Authenticate, func(context *gin.Context) {
+		userList := getMemberList(context)
+		context.IndentedJSON(http.StatusOK, userList)
+	})
+
+	v1.GET("/members3", authHandler.Authenticate, func(context *gin.Context) {
+		userList := getMemberList(context)
+		context.IndentedJSON(http.StatusOK, userList)
+	})
+
 	// @Summary Show an account
 	// @Description Get member by id
 	// @Tags memgers

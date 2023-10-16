@@ -152,25 +152,29 @@ func TokenGlobalApi(c *gin.Context, args ...string) {
 	err = dbHandler.Db.Get(&oauth, oauthClientTokensSelect, clientID)
 	if err != nil {
 		if err == sql.ErrNoRows {
+			// logger.Logger(logger.GetFuncNm(), " select : no rows token start Innsert ")
 			res = insertToken(c, token, clientID, milliseconds, refreshToken, serverAddr)
 		} else {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error select oauth tokens error "})
 			return
 		}
 	} else {
+		// logger.Logger(logger.GetFuncNm(), "exist rows ")
 		getExpiresAt := oauth.ExpiresAT
-		nowMileSec := expiry
+		nowMileSec := time.Now().Unix()
 		// 시간이 지나면 기존의 token 에 delete 하고 새롭게 insert 하여 client id 당 1개의 토큰을 유지한다.
 		if nowMileSec > getExpiresAt {
+			// logger.Logger(logger.GetFuncNm(), "new is bigger than auth info delete and insert  now : ", fmt.Sprintf(" nowMileSec : %d , auth expire : %d ", nowMileSec, getExpiresAt))
 			res = deleteToken(c, clientID)
 			if res {
 				res = insertToken(c, token, clientID, milliseconds, refreshToken, serverAddr)
 			}
 		} else {
-			// 안지 났다
+			// logger.Logger(logger.GetFuncNm(), "auth is bigger than now can use token expire : ", fmt.Sprintf(" nowMileSec : %d , auth expire : %d ", nowMileSec, getExpiresAt))
+			// 안 지났다
 			token = oauth.Token
 			milliseconds = oauth.ExpiresAT
-			gmap.GetAuthInfo(token)
+			gmap.GetAuthInfo(token, c.Request.RequestURI)
 		}
 	}
 
@@ -212,7 +216,7 @@ func insertToken(c *gin.Context, token string, clientID string, milliseconds int
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error insert tokens"})
 		return false
 	} else {
-		gmap.SetAuthInfo(token, clientID, serverAddr, 0, milliseconds, time.Now().Unix())
+		gmap.SetAuthInfo(token, clientID, serverAddr, 0, milliseconds, time.Now().Unix(), c.Request.RequestURI)
 		return true
 	}
 

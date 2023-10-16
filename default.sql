@@ -30,7 +30,7 @@ CREATE TABLE `oauth_client_details` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 
-CREATE TABLE `oauth_tokens` (
+CREATE TABLE `OAUTH_CLIENT_TOKENS` (
   `client_id` varchar(36) NOT NULL,
   `expires_at` int(11) NOT NULL,
   `token` varchar(1000) NOT NULL,
