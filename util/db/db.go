@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -51,6 +52,29 @@ func ColumnsForStruct(s interface{}) []string {
 		}
 	}
 	return columns
+}
+
+func InsertQuery(tableName string, s interface{}) string {
+	cols := ColumnsForStruct(s)
+	placeholders := make([]string, len(cols))
+	for i := range placeholders {
+		placeholders[i] = "?"
+	}
+	return fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
+		tableName,
+		strings.Join(cols, ", "),
+		strings.Join(placeholders, ", "))
+}
+
+func UpdateQuery(tableName string, s interface{}) string {
+	cols := ColumnsForStruct(s)
+	setClauses := make([]string, len(cols))
+	for i, col := range cols {
+		setClauses[i] = fmt.Sprintf("%s = ?", col)
+	}
+	return fmt.Sprintf("UPDATE %s SET %s WHERE id = ?",
+		tableName,
+		strings.Join(setClauses, ", "))
 }
 
 func MakeQuery(partOfQuery ...string) string {
