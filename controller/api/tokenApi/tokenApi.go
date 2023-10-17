@@ -222,6 +222,15 @@ func insertToken(c *gin.Context, token string, clientID string, milliseconds int
 
 }
 
+/*
+Description : 토큰 수정
+Params      : gin.Context
+Params      : token
+Params      : clientId
+return      : bool
+Author      : ssjpooh
+Date        : 2023-10-26
+*/
 func updateToken(c *gin.Context, token, clientId string) bool {
 	_, err := dbHandler.Db.Exec("UPDATE OAUTH_CLIENT_TOKENS SET TOKEN = ? WHERE CLIENT_ID = ? ", token, clientId)
 	if err != nil {
