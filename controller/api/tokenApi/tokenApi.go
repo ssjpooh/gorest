@@ -21,7 +21,7 @@ const (
 	// TokenExpiry = 180
 )
 
-func TokenApiHandler(router *gin.Engine) {
+func TokenApiHandler(router *gin.RouterGroup) {
 
 	router.POST("/oauth/token", tokenHandler)
 	router.POST("/oauth/refresh", refreshTokenHandler)

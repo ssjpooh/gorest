@@ -14,7 +14,7 @@ import (
 	members "restApi/model/members"
 )
 
-func MobileTokenApiHandler(router *gin.Engine) {
+func MobileTokenApiHandler(router *gin.RouterGroup) {
 
 	router.POST("/mobile/oauth/token", tokenHandler)
 	router.POST("/mobile/oauth/refresh", refreshTokenHandler)
