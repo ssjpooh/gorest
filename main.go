@@ -60,7 +60,7 @@ func main() {
 		http.Handle("/", fs)
 		http.Handle("/login", http.HandlerFunc(loginHandler))
 		http.Handle("/roomList", http.HandlerFunc(roomListHandler))
-		http.ListenAndServeTLS(":443", "/Users/shinsangjun/go/src/restApi/util/cert/STAR.foxedu.kr.crt", "/Users/shinsangjun/go/src/restApi/util/cert/STAR.foxedu.kr.key", nil)
+		http.ListenAndServeTLS(":443", options.Prop.CrtPath, options.Prop.KeyPath, nil)
 
 	}()
 	router := gin.Default()
@@ -79,7 +79,7 @@ func main() {
 	url := ginSwagger.URL("https://local.foxedu.kr:443/swagger/doc.json") // The url pointing to API definition
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, url))
 
-	err := router.RunTLS(":1443", "/Users/shinsangjun/go/src/restApi/util/cert/STAR.foxedu.kr.crt", "/Users/shinsangjun/go/src/restApi/util/cert/STAR.foxedu.kr.key")
+	err := router.RunTLS(":1443", options.Prop.CrtPath, options.Prop.KeyPath)
 
 	if err != nil {
 		panic(err)

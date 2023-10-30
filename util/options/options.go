@@ -48,6 +48,8 @@ func Init() {
 	Prop.Id = strings.TrimSpace(p.GetString("db_id", ""))
 	Prop.Pw = strings.TrimSpace(p.GetString("db_pw", ""))
 	Prop.Name = strings.TrimSpace(p.GetString("db_nm", ""))
+	Prop.CrtPath = strings.TrimSpace(p.GetString("ssl_crt", ""))
+	Prop.KeyPath = strings.TrimSpace(p.GetString("ssl_key", ""))
 
 	logger.Logger(logger.GetFuncNm(), "option Init Success")
 }
