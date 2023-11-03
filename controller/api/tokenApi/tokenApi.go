@@ -27,6 +27,22 @@ func TokenApiHandler(router *gin.RouterGroup) {
 	router.POST("/oauth/refresh", refreshTokenHandler)
 }
 
+func GetOauthClientDetails(context *gin.Context, userIdx string) oauthInfo.OAuthClientDetails {
+
+	var oauthClientDetails oauthInfo.OAuthClientDetails
+	query := dbHandler.MakeQuery(dbHandler.SELECT, oauthInfo.OAuthClientDetailsColumns, dbHandler.FROM, "oauth_client_details ", dbHandler.WHERE, "user_idx = ? ")
+	logger.Logger(logger.GetFuncNm(), " SELECT : ", query, " client id : ", userIdx)
+	err := dbHandler.Db.Get(&oauthClientDetails, query, userIdx)
+
+	if err != nil {
+		context.IndentedJSON(http.StatusNotFound, gin.H{"message": "not Found"})
+		logger.Logger(logger.GetFuncNm(), "select error :", err.Error())
+		return oauthClientDetails
+	}
+
+	return oauthClientDetails
+}
+
 /*
 Description : global refresh token handler
 Params      : gin.Context
@@ -102,6 +118,7 @@ func TokenGlobalApi(c *gin.Context, args ...string) {
 
 	var clientID string
 	var clientSecret string
+	var userSID string
 
 	if len(args) > 0 {
 		for index, arg := range args {
@@ -111,6 +128,9 @@ func TokenGlobalApi(c *gin.Context, args ...string) {
 			if index == 1 {
 				clientSecret = arg
 			}
+			if index == 2 {
+				userSID = arg
+			}
 		}
 	} else {
 		logger.Logger(logger.GetFuncNm(), "param err : client id , client secret check ")
@@ -118,9 +138,9 @@ func TokenGlobalApi(c *gin.Context, args ...string) {
 	}
 
 	res := true
-	var client oauthInfo.ClientDetails
+	var client oauthInfo.OAuthClientDetails
 
-	oauthClientDetailsSelect := dbHandler.MakeQuery(dbHandler.SELECT, oauthInfo.OAuthClientDetailsColumns, dbHandler.FROM, "OAUTH_CLIENT_DETAILS ", dbHandler.WHERE, "CLIENT_ID = ? ")
+	oauthClientDetailsSelect := dbHandler.MakeQuery(dbHandler.SELECT, oauthInfo.OAuthClientDetailsColumns, dbHandler.FROM, "oauth_client_details ", dbHandler.WHERE, "CLIENT_ID = ? ")
 	err := dbHandler.Db.Get(&client, oauthClientDetailsSelect, clientID)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -136,9 +156,9 @@ func TokenGlobalApi(c *gin.Context, args ...string) {
 		return
 	}
 
-	var oauth oauthInfo.OauthInfo
+	var oauth oauthInfo.OAuthClientTokens
 	var expiry = time.Now().Add(time.Second * TokenExpiry).Unix()
-	token, refreshToken, serverAddr, err := GenerateToken(c, expiry, clientID)
+	token, refreshToken, serverAddr, err := GenerateToken(c, expiry, clientID, userSID)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error generator token"})
@@ -147,7 +167,7 @@ func TokenGlobalApi(c *gin.Context, args ...string) {
 
 	milliseconds := expiry
 
-	oauthClientTokensSelect := dbHandler.MakeQuery(dbHandler.SELECT, oauthInfo.OAuthClientTokensColumns, dbHandler.FROM, "OAUTH_CLIENT_TOKENS ", dbHandler.WHERE, "CLIENT_ID = ? ")
+	oauthClientTokensSelect := dbHandler.MakeQuery(dbHandler.SELECT, oauthInfo.OAuthClientTokensColumns, dbHandler.FROM, "oauth_client_tokens ", dbHandler.WHERE, "CLIENT_ID = ? ")
 	logger.Logger(logger.GetFuncNm(), " SELECT : ", oauthClientTokensSelect, " client id : ", clientID)
 	err = dbHandler.Db.Get(&oauth, oauthClientTokensSelect, clientID)
 	if err != nil {
@@ -160,7 +180,7 @@ func TokenGlobalApi(c *gin.Context, args ...string) {
 		}
 	} else {
 		// logger.Logger(logger.GetFuncNm(), "exist rows ")
-		getExpiresAt := oauth.ExpiresAT
+		getExpiresAt := oauth.ExpiresAt
 		nowMileSec := time.Now().Unix()
 		// 시간이 지나면 기존의 token 에 delete 하고 새롭게 insert 하여 client id 당 1개의 토큰을 유지한다.
 		if nowMileSec > getExpiresAt {
@@ -173,7 +193,7 @@ func TokenGlobalApi(c *gin.Context, args ...string) {
 			// logger.Logger(logger.GetFuncNm(), "auth is bigger than now can use token expire : ", fmt.Sprintf(" nowMileSec : %d , auth expire : %d ", nowMileSec, getExpiresAt))
 			// 안 지났다
 			token = oauth.Token
-			milliseconds = oauth.ExpiresAT
+			milliseconds = oauth.ExpiresAt
 			gmap.GetAuthInfo(token, c.Request.RequestURI)
 		}
 	}
@@ -211,7 +231,7 @@ Date        : 2023-10-26
 */
 func insertToken(c *gin.Context, token string, clientID string, milliseconds int64, refreshToken string, serverAddr string) bool {
 
-	_, err := dbHandler.Db.Exec("INSERT INTO OAUTH_CLIENT_TOKENS (token, client_id, expires_at, refresh_token, server_address) VALUES (?, ?, ?, ?, ? )", token, clientID, milliseconds, refreshToken, serverAddr)
+	_, err := dbHandler.Db.Exec("INSERT INTO oauth_client_tokens (token, client_id, expires_at, refresh_token, server_address) VALUES (?, ?, ?, ?, ? )", token, clientID, milliseconds, refreshToken, serverAddr)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error insert tokens"})
 		return false
@@ -232,7 +252,7 @@ Author      : ssjpooh
 Date        : 2023-10-26
 */
 func updateToken(c *gin.Context, token, clientId string) bool {
-	_, err := dbHandler.Db.Exec("UPDATE OAUTH_CLIENT_TOKENS SET TOKEN = ? WHERE CLIENT_ID = ? ", token, clientId)
+	_, err := dbHandler.Db.Exec("UPDATE oauth_client_tokens SET TOKEN = ? WHERE CLIENT_ID = ? ", token, clientId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error update tokens"})
 		return false
@@ -251,7 +271,7 @@ Date        : 2023-10-26
 */
 func deleteToken(c *gin.Context, clientID string) bool {
 
-	_, err := dbHandler.Db.Exec("DELETE FROM OAUTH_CLIENT_TOKENS WHERE CLIENT_ID = ? ", clientID)
+	_, err := dbHandler.Db.Exec("DELETE FROM oauth_client_tokens WHERE CLIENT_ID = ? ", clientID)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error delete tokens"})
@@ -270,7 +290,7 @@ Author      : ssjpooh
 Date        : 2023-10-12
 */
 func deleteRefreshToken(c *gin.Context, refreshToken string) bool {
-	_, err := dbHandler.Db.Exec("DELETE FROM OAUTH_CLIENT_TOKENS WHERE REFRESH_TOKEN = ? ", refreshToken)
+	_, err := dbHandler.Db.Exec("DELETE FROM oauth_client_tokens WHERE REFRESH_TOKEN = ? ", refreshToken)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error delete refresh tokens"})
@@ -291,13 +311,13 @@ return      : error
 Author      : ssjpooh
 Date        : 2023.10.10
 */
-func GenerateToken(c *gin.Context, exp int64, clientId string) (string, string, string, error) {
+func GenerateToken(c *gin.Context, exp int64, clientId, userSID string) (string, string, string, error) {
 
 	token := jwt.New(jwt.SigningMethodHS256)
 	serverAddr := util.GetLocalIP()
 	claims := token.Claims.(jwt.MapClaims)
 	claims["authorized"] = true
-	claims["user"] = "ssj"
+	claims["user"] = userSID
 	claims["exp"] = exp
 	claims["requested"] = c.RemoteIP()
 	claims["server"] = serverAddr
@@ -309,7 +329,7 @@ func GenerateToken(c *gin.Context, exp int64, clientId string) (string, string, 
 
 	refreshToken := jwt.New(jwt.SigningMethodHS256)
 	rtClaims := refreshToken.Claims.(jwt.MapClaims)
-	rtClaims["sub"] = "ssj"
+	rtClaims["sub"] = userSID
 	rtClaims["clientId"] = clientId
 	rtClaims["exp"] = time.Now().Add(time.Second * TokenExpiry * 24).Unix()
 

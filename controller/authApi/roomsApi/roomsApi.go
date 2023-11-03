@@ -1,9 +1,9 @@
-package roomapi
+package roomsapi
 
 import (
 	"net/http"
 
-	rooms "restApi/model/rooms"
+	rooms "restApi/model/vbase"
 	dbHandler "restApi/util/db"
 
 	logger "restApi/util/log"
@@ -13,20 +13,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func getRoomList(context *gin.Context) []rooms.Room {
+func getRoomList(context *gin.Context) []rooms.Rooms {
 
-	logger.Logger(logger.GetFuncNm(), "1")
-	var roomList []rooms.Room
+	var roomList []rooms.Rooms
 
-	query := "SELECT room_no, title FROM CONF_TBL "
-	logger.Logger(logger.GetFuncNm(), "2")
+	query := dbHandler.MakeQuery(dbHandler.SELECT, rooms.RoomsColumns, dbHandler.FROM, "rooms")
+
 	err := dbHandler.Db.Select(&roomList, query)
 	if err != nil {
-		logger.Logger(logger.GetFuncNm(), "3")
 		context.IndentedJSON(http.StatusNotFound, gin.H{"message": "not Found"})
 		logger.Logger(logger.GetFuncNm(), "select error : ", err.Error())
 	}
-	logger.Logger(logger.GetFuncNm(), "4")
 	return roomList
 
 }

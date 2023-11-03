@@ -9,13 +9,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
+	"golang.org/x/crypto/bcrypt"
 
 	mobiletokenapi "restApi/controller/api/mobileTokenApi"
 	tokenapi "restApi/controller/api/tokenApi"
-	memberApi "restApi/controller/authApi/memberApi"
 	memoryApi "restApi/controller/authApi/memoryApi"
-	roomApi "restApi/controller/authApi/roomApi"
+	roomsApi "restApi/controller/authApi/roomsApi"
+	sitesApi "restApi/controller/authApi/sitesApi"
+	usersApi "restApi/controller/authApi/usersApi"
 
+	auth "restApi/model/auth"
 	dbHandler "restApi/util/db"
 
 	_ "restApi/docs"
@@ -27,6 +30,10 @@ import (
 
 	logger "restApi/util/log"
 	options "restApi/util/options"
+
+	vbase "restApi/model/vbase"
+
+	"github.com/gin-contrib/cors"
 )
 
 var logFile = time.Now().Format("2006-01-02 15:04")
@@ -58,22 +65,39 @@ func main() {
 	go func() {
 		fs := http.FileServer(http.Dir("./web"))
 		http.Handle("/", fs)
-		http.Handle("/login", http.HandlerFunc(loginHandler))
+		// http.Handle("/login", http.HandlerFunc(loginHandler))
 		http.Handle("/roomList", http.HandlerFunc(roomListHandler))
 		http.ListenAndServeTLS(":443", options.Prop.CrtPath, options.Prop.KeyPath, nil)
 
 	}()
 	router := gin.Default()
 
+	// CORS 설정
+	config := cors.DefaultConfig()
+	config.AllowAllOrigins = true
+	config.AllowCredentials = true
+	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE"}
+	config.AllowHeaders = []string{"Authorization", "Content-Type"}
+
+	router.Use(cors.New(config))
 	// v1 그룸에 포함 되지 않는 api들
 	router.GET("/", indexHandler)
 	router.POST("/login", apiLoginHandler)
 
 	v1 := router.Group("/v1")
+	// 토큰
 	tokenapi.TokenApiHandler(v1)
+	// 모바일 토큰
 	mobiletokenapi.MobileTokenApiHandler(v1)
-	memberApi.MmberApiHandler(v1)
-	roomApi.RoomApiHandler(v1)
+
+	// users
+	sitesApi.SitesApiHandler(v1)
+	// sub users
+	usersApi.UsersApiHandler(v1)
+	// rooms
+	roomsApi.RoomApiHandler(v1)
+
+	// 인증 토큰  관리
 	memoryApi.MemoryApiHaneler(v1)
 
 	url := ginSwagger.URL("https://local.foxedu.kr:443/swagger/doc.json") // The url pointing to API definition
@@ -140,8 +164,53 @@ func indexHandler(context *gin.Context) {
 func apiLoginHandler(context *gin.Context) {
 	id := context.PostForm("id")
 	pw := context.PostForm("password")
+	logger.Logger(logger.GetFuncNm(), "id : ", id, " pw : ", pw)
 
-	logger.Logger(logger.GetFuncNm(), " id : ", id, " pw : ", pw)
+	var userInfo vbase.Users
+	userInfo = usersApi.GetUsersInfoById(context, id)
 
-	context.JSON(http.StatusOK, gin.H{"id": id, "pw": pw})
+	if userInfo.UserID == "" {
+		context.JSON(http.StatusNotFound, gin.H{"message": "please check id or password"})
+	}
+	var matchPassword bool
+	if options.Prop.DebugMode {
+		if pw == userInfo.Passwd {
+			matchPassword = true
+		} else {
+			matchPassword = false
+		}
+	} else {
+		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(pw), bcrypt.DefaultCost)
+
+		if pw == string(hashedPassword) {
+			matchPassword = true
+		} else {
+			matchPassword = false
+		}
+	}
+
+	if !matchPassword {
+		context.JSON(http.StatusNotFound, gin.H{"message": "please check id or password"})
+	}
+	var siteIdx string
+	siteIdx = userInfo.SiteIdx
+
+	var siteInfo vbase.Sites
+	siteInfo = sitesApi.GetSitesInfoByIdx(context, siteIdx)
+
+	if siteInfo.SiteID == "" {
+		context.JSON(http.StatusNotFound, gin.H{"message": "please check id or password"})
+	}
+
+	var oauthClientDetails auth.OAuthClientDetails
+	oauthClientDetails = tokenapi.GetOauthClientDetails(context, siteIdx)
+	if oauthClientDetails.ClientID == "" {
+		context.JSON(http.StatusNotFound, gin.H{"message": "not registed client info"})
+	}
+
+	clientId := oauthClientDetails.ClientID
+	clientSecret := oauthClientDetails.ClientSecret
+
+	tokenapi.TokenGlobalApi(context, clientId, clientSecret)
+
 }

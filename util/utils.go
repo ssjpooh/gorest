@@ -8,14 +8,14 @@ import (
 	"github.com/google/uuid"
 )
 
-func GenterateUUID() uuid.UUID {
+func GenterateUUID() string {
 
 	uuidObj, err := uuid.NewRandom()
 	if err != nil {
 		logger.Logger(logger.GetFuncNm(), "UUID generate error : ", err.Error())
 	}
 
-	return uuidObj
+	return uuidObj.String()
 }
 
 func GetLocalIP() string {

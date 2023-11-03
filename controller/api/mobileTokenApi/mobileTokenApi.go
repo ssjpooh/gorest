@@ -11,7 +11,7 @@ import (
 	db "restApi/util/db"
 
 	oauthInfo "restApi/model/auth"
-	members "restApi/model/members"
+	users "restApi/model/vbase"
 )
 
 func MobileTokenApiHandler(router *gin.RouterGroup) {
@@ -45,8 +45,8 @@ func tokenHandler(c *gin.Context) {
 		logger.Logger(logger.GetFuncNm(), "mobile token with user_id : ", userId)
 		// 모바일용으로 id / pw 로 client id / secret 을 받아서 새로 설정 한다.
 
-		var userInfo members.Member
-		memberSelect := db.MakeQuery(db.SELECT, members.MemberColumns, db.FROM, "USER_TBL ", db.WHERE, "USER_ID = ? ")
+		var userInfo users.Users
+		memberSelect := db.MakeQuery(db.SELECT, users.UsersColumns, db.FROM, " users ", db.WHERE, "USER_ID = ? ")
 
 		logger.Logger(logger.GetFuncNm(), " select :  ", memberSelect)
 		err := db.Db.Get(&userInfo, memberSelect, userId)
@@ -60,12 +60,12 @@ func tokenHandler(c *gin.Context) {
 			return
 		}
 
-		var oauthClientDetails oauthInfo.ClientDetails
+		var oauthClientDetails oauthInfo.OAuthClientDetails
 		oauthClientDetailsSelect := db.MakeQuery(db.SELECT, oauthInfo.OAuthClientDetailsColumns, db.FROM, " OAUTH_CLIENT_DETAILS ", db.WHERE, " OWNER_IDX = ? ")
 
-		logger.Logger(logger.GetFuncNm(), " select :  ", oauthClientDetailsSelect, " owner_idx : ", userInfo.OWNERIDX)
+		logger.Logger(logger.GetFuncNm(), " select :  ", oauthClientDetailsSelect, " owner_idx : ", string(userInfo.UserIdx))
 
-		err = db.Db.Get(&oauthClientDetails, oauthClientDetailsSelect, userInfo.OWNERIDX)
+		err = db.Db.Get(&oauthClientDetails, oauthClientDetailsSelect, userInfo.UserIdx)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid_owner_idx "})

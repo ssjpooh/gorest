@@ -50,6 +50,7 @@ func Init() {
 	Prop.Name = strings.TrimSpace(p.GetString("db_nm", ""))
 	Prop.CrtPath = strings.TrimSpace(p.GetString("ssl_crt", ""))
 	Prop.KeyPath = strings.TrimSpace(p.GetString("ssl_key", ""))
+	Prop.DebugMode = p.GetBool("debug_mode", false)
 
 	logger.Logger(logger.GetFuncNm(), "option Init Success")
 }

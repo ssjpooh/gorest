@@ -63,7 +63,7 @@ func GetAuthInfo(token string, uri string) (oauthInfo.AuthInfo, error) {
 		return authInfo, nil
 	} else {
 		logger.Logger(logger.GetFuncNm(), "GetAuthInfo not exitst")
-		var oauth oauthInfo.OauthInfo
+		var oauth oauthInfo.OAuthClientTokens
 		err := dbHandler.Db.Get(&oauth, "SELECT refresh_token, client_id, expires_at, token, server_address from OAUTH_CLIENT_TOKENS where token = ? ", token)
 		logger.Logger(logger.GetFuncNm(), "search token Info by token : ", token)
 		if err != nil {
@@ -71,7 +71,7 @@ func GetAuthInfo(token string, uri string) (oauthInfo.AuthInfo, error) {
 			return authInfo, errors.New("error: no token info for selecdt ")
 		}
 
-		SetAuthInfo(oauth.Token, oauth.ClientID, oauth.ServerAddr, 0, oauth.ExpiresAT, time.Now().Unix(), uri)
+		SetAuthInfo(oauth.Token, oauth.ClientID, oauth.ServerAddress, 0, int64(oauth.ExpiresAt), time.Now().Unix(), uri)
 
 		return GlobalAuthInfoMap[token], nil
 	}

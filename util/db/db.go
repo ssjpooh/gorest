@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/jmoiron/sqlx"
@@ -17,9 +18,13 @@ var SELECT = "SELECT "
 var UPDATE = "UPDATE "
 var INSERT = "INSERT INTO "
 var DELETE = "DELETE "
-var FROM = "FROM "
-var WHERE = "WHERE "
-var SET = "SET "
+var FROM = " FROM "
+var WHERE = " WHERE "
+var SET = " SET "
+
+func Limit(count int) string {
+	return " LIMIT " + strconv.Itoa(count)
+}
 
 /*
 Description : db 접속
