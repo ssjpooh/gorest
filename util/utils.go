@@ -1,6 +1,7 @@
 package util
 
 import (
+	"database/sql"
 	"net"
 
 	logger "restApi/util/log"
@@ -32,4 +33,13 @@ func GetLocalIP() string {
 		}
 	}
 	return ""
+}
+
+func GetStringOrNil(s sql.NullString) *string {
+	if !s.Valid {
+		// SQL NULL을 나타냄
+		return nil
+	}
+	// 문자열에 대한 포인터를 반환함
+	return &s.String
 }

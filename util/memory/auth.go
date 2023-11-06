@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	oauthInfo "restApi/model/auth"
@@ -89,7 +90,7 @@ return      :
 Author      : ssjpooh
 Date        : 2023.10.10
 */
-func SetAuthInfo(token string, clientId string, serverAddr string, callCount int, expiredDt int64, lastRequestDt int64, apiName string) {
+func SetAuthInfo(token string, clientId string, serverAddr sql.NullString, callCount int, expiredDt int64, lastRequestDt int64, apiName string) {
 	logger.Logger(logger.GetFuncNm(), "Set Global Map : ", token)
 	GlobalAuthInfoMap[token] = oauthInfo.AuthInfo{ClientId: clientId, ServerAddr: serverAddr, CallCount: callCount,
 		ExpiredDt: expiredDt, LastRequestDt: lastRequestDt, ApiName: apiName}

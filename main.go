@@ -174,7 +174,7 @@ func apiLoginHandler(context *gin.Context) {
 	}
 	var matchPassword bool
 	if options.Prop.DebugMode {
-		if pw == userInfo.Passwd {
+		if pw == userInfo.Passwd.String {
 			matchPassword = true
 		} else {
 			matchPassword = false

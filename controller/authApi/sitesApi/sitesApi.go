@@ -43,7 +43,7 @@ func getSitesList(context *gin.Context) []sites.Sites {
 
 func GetSitesInfoById(context *gin.Context, id string) sites.Sites {
 	var userInfo sites.Sites
-	query := dbHandler.MakeQuery(dbHandler.SELECT, sites.SitesColumns, dbHandler.FROM, "sites", dbHandler.WHERE, "user_id = ? ")
+	query := dbHandler.MakeQuery(dbHandler.SELECT, sites.SitesColumns, dbHandler.FROM, "sites", dbHandler.WHERE, "site_id = ? ")
 
 	err := dbHandler.Db.Get(&userInfo, query, id)
 	if err != nil {
@@ -58,7 +58,7 @@ func GetSitesInfoById(context *gin.Context, id string) sites.Sites {
 
 func GetSitesInfoByIdx(context *gin.Context, idx string) sites.Sites {
 	var userInfo sites.Sites
-	query := dbHandler.MakeQuery(dbHandler.SELECT, sites.SitesColumns, dbHandler.FROM, "sites", dbHandler.WHERE, "user_idx = ? ")
+	query := dbHandler.MakeQuery(dbHandler.SELECT, sites.SitesColumns, dbHandler.FROM, "sites", dbHandler.WHERE, "site_idx = ? ")
 	logger.Logger(logger.GetFuncNm(), " query : ", query, " idx : ", idx)
 	err := dbHandler.Db.Get(&userInfo, query, idx)
 	if err != nil {
@@ -92,9 +92,9 @@ func inserSitesInfo(context *gin.Context) sql.Result {
 
 	var hashedPassword []byte
 	// 비밀번호를 해싱
-	if newSites.Passwd != "" {
+	if newSites.Passwd.Valid {
 
-		hashedPassword, err = bcrypt.GenerateFromPassword([]byte(newSites.Passwd), bcrypt.DefaultCost)
+		hashedPassword, err = bcrypt.GenerateFromPassword([]byte(newSites.Passwd.String), bcrypt.DefaultCost)
 		if err != nil {
 			logger.Logger(logger.GetFuncNm(), " password hash error : ", err.Error())
 		}
@@ -150,7 +150,7 @@ func patchSitesInfo(context *gin.Context, siteId string) sites.Sites {
 			siteInfo.Name = newSites.Name
 		}
 
-		query := "UPDATE USER_TBL set kor_user_name = ? , eng_user_name = ? where user_id = ? "
+		query := "UPDATE USER_TBL set kor_user_name = ? , eng_user_name = ? where site_id = ? "
 		_, err := dbHandler.Db.Exec(query, siteInfo.Name, siteInfo.SiteID)
 		if err != nil {
 			context.IndentedJSON(http.StatusBadRequest, gin.H{"message": "bad request"})
@@ -177,7 +177,7 @@ func deleteSitesInfo(context *gin.Context, siteId string) sql.Result {
 		context.IndentedJSON(http.StatusBadRequest, gin.H{"message": "bad param"})
 	}
 
-	query := "UPDATE USER_TBL set kor_user_name = ? , eng_user_name = ? where user_id = ? "
+	query := "UPDATE USER_TBL set kor_user_name = ? , eng_user_name = ? where site_id = ? "
 	result, err := dbHandler.Db.Exec(query, siteInfo.Name, siteInfo.SiteID)
 	if err != nil {
 		context.IndentedJSON(http.StatusBadRequest, gin.H{"message": "bad request"})

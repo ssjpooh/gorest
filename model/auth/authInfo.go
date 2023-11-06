@@ -1,5 +1,7 @@
 package auth
 
+import "database/sql"
+
 var JWTKey = []byte("FOXEduP@ssW0rd")
 
 type AuthInfo struct {
@@ -7,6 +9,6 @@ type AuthInfo struct {
 	ExpiredDt     int64
 	LastRequestDt int64
 	CallCount     int
-	ServerAddr    string
+	ServerAddr    sql.NullString
 	ApiName       string
 }

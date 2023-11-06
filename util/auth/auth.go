@@ -84,7 +84,10 @@ func Authenticate(c *gin.Context) {
 	auth.CallCount = auth.CallCount + 1
 	auth.LastRequestDt = time.Now().Unix()
 	auth.ApiName = c.Request.RequestURI
-	memory.SetAuthInfo(bearerToken, auth.ClientId, auth.ServerAddr, auth.CallCount, auth.ExpiredDt, auth.LastRequestDt, auth.ApiName)
 
+	if auth.ServerAddr.Valid {
+
+		memory.SetAuthInfo(bearerToken, auth.ClientId, auth.ServerAddr, auth.CallCount, auth.ExpiredDt, auth.LastRequestDt, auth.ApiName)
+	}
 	c.Next()
 }

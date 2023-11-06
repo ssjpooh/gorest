@@ -64,10 +64,16 @@ func inserUsersInfo(context *gin.Context) sql.Result {
 
 	query := "INSERT INTO USER_TBL (owner_idx, user_id, user_passwd, kor_user_name, eng_user_name ) values (?, ? , ? , ? , ?)"
 
+	var hashedPassword []byte
 	// 비밀번호를 해싱
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newUser.Passwd), bcrypt.DefaultCost)
-	if err != nil {
-		logger.Logger(logger.GetFuncNm(), " password hash error : ", err.Error())
+	if newUser.Passwd.Valid {
+
+		hashedPassword, err = bcrypt.GenerateFromPassword([]byte(newUser.Passwd.String), bcrypt.DefaultCost)
+		if err != nil {
+			logger.Logger(logger.GetFuncNm(), " password hash error : ", err.Error())
+		}
+	} else {
+		hashedPassword = nil
 	}
 
 	// 무작위 UUID 생성

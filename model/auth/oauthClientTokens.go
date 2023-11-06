@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"database/sql"
 	"fmt"
 	db "restApi/util/db"
 	"strings"
@@ -10,13 +11,13 @@ import (
 
 type OAuthClientTokens struct {
 	gorm.Model
-	ClientID      string `gorm:"type:char(36);not null;primaryKey;index;foreignKey:OAuthClientDetailsRefer" db:"client_id"`
-	ExpiresAt     int64  `gorm:"not null" db:"expires_at"`
-	Token         string `gorm:"type:varchar(1000);not null" db:"token"`
-	RefreshToken  string `gorm:"type:varchar(1000);not null" db:"refresh_token"`
-	ServerAddress string `gorm:"type:varchar(50)" db:"server_address"` // Nullable
-	CDate         string `gorm:"type:varchar(14);index" db:"cdate"`    // Nullable
-	MDate         string `gorm:"type:varchar(14);index" db:"mdate"`    // Nullable
+	ClientID      string         `gorm:"type:char(36);not null;primaryKey;index;foreignKey:OAuthClientDetailsRefer" db:"client_id"`
+	ExpiresAt     int64          `gorm:"not null" db:"expires_at"`
+	Token         string         `gorm:"type:varchar(1000);not null" db:"token"`
+	RefreshToken  string         `gorm:"type:varchar(1000);not null" db:"refresh_token"`
+	ServerAddress sql.NullString `gorm:"type:varchar(50)" db:"server_address"` // Nullable
+	CDate         sql.NullString `gorm:"type:varchar(14);index" db:"cdate"`    // Nullable
+	MDate         sql.NullString `gorm:"type:varchar(14);index" db:"mdate"`    // Nullable
 }
 
 func (OAuthClientTokens) TableName() string {

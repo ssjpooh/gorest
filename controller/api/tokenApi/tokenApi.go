@@ -30,7 +30,7 @@ func TokenApiHandler(router *gin.RouterGroup) {
 func GetOauthClientDetails(context *gin.Context, userIdx string) oauthInfo.OAuthClientDetails {
 
 	var oauthClientDetails oauthInfo.OAuthClientDetails
-	query := dbHandler.MakeQuery(dbHandler.SELECT, oauthInfo.OAuthClientDetailsColumns, dbHandler.FROM, "oauth_client_details ", dbHandler.WHERE, "user_idx = ? ")
+	query := dbHandler.MakeQuery(dbHandler.SELECT, oauthInfo.OAuthClientDetailsColumns, dbHandler.FROM, "oauth_client_details ", dbHandler.WHERE, "site_idx = ? ")
 	logger.Logger(logger.GetFuncNm(), " SELECT : ", query, " client id : ", userIdx)
 	err := dbHandler.Db.Get(&oauthClientDetails, query, userIdx)
 
@@ -82,7 +82,7 @@ func RefreshTokenGlobalApi(c *gin.Context, refresh string) {
 		// newToken 을 넣자
 		res = deleteRefreshToken(c, refresh)
 		if res {
-			res = insertToken(c, token, clientId, expiry, refresh, util.GetLocalIP())
+			res = insertToken(c, token, clientId, expiry, refresh, sql.NullString{String: util.GetLocalIP(), Valid: true})
 			if !res {
 				logger.Logger(logger.GetFuncNm(), "refresh token insert err")
 				return
@@ -229,7 +229,7 @@ return      : bool
 Author      : ssjpooh
 Date        : 2023-10-26
 */
-func insertToken(c *gin.Context, token string, clientID string, milliseconds int64, refreshToken string, serverAddr string) bool {
+func insertToken(c *gin.Context, token string, clientID string, milliseconds int64, refreshToken string, serverAddr sql.NullString) bool {
 
 	_, err := dbHandler.Db.Exec("INSERT INTO oauth_client_tokens (token, client_id, expires_at, refresh_token, server_address) VALUES (?, ?, ?, ?, ? )", token, clientID, milliseconds, refreshToken, serverAddr)
 	if err != nil {
@@ -311,32 +311,32 @@ return      : error
 Author      : ssjpooh
 Date        : 2023.10.10
 */
-func GenerateToken(c *gin.Context, exp int64, clientId, userSID string) (string, string, string, error) {
+func GenerateToken(c *gin.Context, exp int64, clientId, userID string) (string, string, sql.NullString, error) {
 
 	token := jwt.New(jwt.SigningMethodHS256)
 	serverAddr := util.GetLocalIP()
 	claims := token.Claims.(jwt.MapClaims)
 	claims["authorized"] = true
-	claims["user"] = userSID
+	claims["user"] = userID
 	claims["exp"] = exp
 	claims["requested"] = c.RemoteIP()
 	claims["server"] = serverAddr
 
 	tokenString, err := token.SignedString(oauthInfo.JWTKey)
 	if err != nil {
-		return "", "", "", err
+		return "", "", sql.NullString{}, err
 	}
 
 	refreshToken := jwt.New(jwt.SigningMethodHS256)
 	rtClaims := refreshToken.Claims.(jwt.MapClaims)
-	rtClaims["sub"] = userSID
+	rtClaims["sub"] = userID
 	rtClaims["clientId"] = clientId
 	rtClaims["exp"] = time.Now().Add(time.Second * TokenExpiry * 24).Unix()
 
 	rt, err := refreshToken.SignedString(oauthInfo.JWTKey)
 	if err != nil {
-		return "", "", "", err
+		return "", "", sql.NullString{}, err
 	}
 
-	return tokenString, rt, serverAddr, nil
+	return tokenString, rt, sql.NullString{String: serverAddr, Valid: true}, nil
 }
